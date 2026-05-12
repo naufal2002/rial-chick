@@ -81,10 +81,13 @@ router.post("/verify", async (req, res) => {
     const token = generateSessionToken();
     createSession(token, walletAddress);
 
+    // req.secure is true on Railway (trust proxy 1 is set), ensuring
+    // sameSite:none + secure:true for cross-domain cookies to Vercel frontend.
+    const isSecure = req.secure || req.headers["x-forwarded-proto"] === "https";
     res.cookie(SESSION_COOKIE, token, {
       httpOnly: true,
-      secure: env.NODE_ENV === "production",
-      sameSite: env.NODE_ENV === "production" ? "none" : "lax",
+      secure: isSecure,
+      sameSite: isSecure ? "none" : "lax",
       maxAge: 24 * 60 * 60 * 1000,
       path: "/",
     });
@@ -109,11 +112,12 @@ router.post("/logout", (req, res) => {
     deleteSession(token);
   }
 
+  const isSecure = req.secure || req.headers["x-forwarded-proto"] === "https";
   res.clearCookie(SESSION_COOKIE, {
     path: "/",
     httpOnly: true,
-    secure: env.NODE_ENV === "production",
-    sameSite: env.NODE_ENV === "production" ? "none" : "lax",
+    secure: isSecure,
+    sameSite: isSecure ? "none" : "lax",
   });
   res.json({ success: true });
 });

@@ -43,10 +43,15 @@ app.use(
   })
 );
 
-// CORS — allow frontend origin with credentials (cookies)
+// CORS — allow frontend origins with credentials (cookies)
+// Array ensures the Vercel deployment always works even if FRONTEND_URL env var
+// points to localhost in Railway.
+const ALLOWED_ORIGINS = Array.from(
+  new Set([env.FRONTEND_URL, "https://rial-chick.vercel.app"])
+);
 app.use(
   cors({
-    origin: env.FRONTEND_URL,
+    origin: ALLOWED_ORIGINS,
     credentials: true,
   })
 );

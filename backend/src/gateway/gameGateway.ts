@@ -72,7 +72,10 @@ async function signSettlementWithTimeout(params: Parameters<typeof signSettlemen
 
 export function setupGameGateway(httpServer: HttpServer): SocketServer {
   io = new SocketServer(httpServer, {
-    cors: { origin: env.FRONTEND_URL, credentials: true },
+    cors: {
+      origin: Array.from(new Set([env.FRONTEND_URL, "https://rial-chick.vercel.app"])),
+      credentials: true,
+    },
     allowRequest: (_req, callback) => {
       callback(null, true);
     },
