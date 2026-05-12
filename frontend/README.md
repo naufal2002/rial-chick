@@ -1,6 +1,6 @@
-# Pass Chick Frontend
+# Rial Chick Frontend
 
-The Pass Chick frontend is a Next.js application that handles:
+The Rial Chick frontend is a Next.js application that handles:
 
 - wallet connection
 - SIWE authentication against the backend
@@ -11,7 +11,7 @@ The Pass Chick frontend is a Next.js application that handles:
 
 ## Live Deployment
 
-- App: https://pass-chick.vercel.app/
+- App: https://rial-chick.vercel.app/
 
 ## Stack
 

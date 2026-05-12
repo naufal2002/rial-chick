@@ -1,6 +1,5 @@
 "use client";
 
-import { useAppKit } from "@reown/appkit/react";
 import {
   createContext,
   useContext,
@@ -10,18 +9,10 @@ import {
   useState,
 } from "react";
 import type { ReactNode } from "react";
-import { SiweMessage } from "siwe";
-import {
-  useAccount,
-  useDisconnect,
-  useSignMessage,
-  useSwitchChain,
-} from "wagmi";
 import { backendFetch, backendPost } from "../../lib/backend/api";
 import { BACKEND_API_URL, hasBackendApiConfig } from "../../lib/backend/config";
-import { ensureAppKitInitialized } from "../../lib/web3/appKit";
-import { MONAD_CHAIN, hasMonadChainConfig } from "../../lib/web3/monad";
-import { readRawErrorMessage, toUserFacingWalletError } from "../../lib/errors";
+
+// Auth via window.ethereum (Rabby/MetaMask). Backend and game remain mock.
 
 type WalletContextValue = {
   account: string;
@@ -51,425 +42,167 @@ type WalletProviderProps = {
   children: ReactNode;
 };
 
-type AddChainArguments = {
-  method: "wallet_addEthereumChain";
-  params: Array<{
-    chainId: string;
-    chainName: string;
-    nativeCurrency: {
-      name: string;
-      symbol: string;
-      decimals: number;
-    };
-    rpcUrls: string[];
-    blockExplorerUrls: string[];
-  }>;
-};
-
-type Eip1193Provider = {
-  request: (args: AddChainArguments) => Promise<unknown>;
-};
-
-type ChainSwitchError = {
-  code?: number;
-  message?: string;
-};
-
 const WalletContext = createContext<WalletContextValue | undefined>(undefined);
 
-function toHexChainId(chainId: number | undefined) {
-  if (!chainId) return "";
-  return `0x${chainId.toString(16)}`;
-}
-
-function readSwitchErrorCode(error: unknown) {
-  if (error && typeof error === "object" && "code" in error) {
-    return Number((error as ChainSwitchError).code);
-  }
-  return null;
-}
-
-function readErrorMessage(error: unknown, fallback: string) {
-  return readRawErrorMessage(error, fallback);
-}
-
-function getEip1193Provider() {
-  if (typeof window === "undefined") return null;
-  const runtimeWindow = window as Window & { ethereum?: Eip1193Provider };
-  return runtimeWindow.ethereum || null;
-}
-
 export function WalletProvider({ children }: WalletProviderProps) {
+  const [account, setAccount] = useState("");
+  const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState("");
-  const [isAppKitOpening, setIsAppKitOpening] = useState(false);
-  const [backendAddress, setBackendAddress] = useState("");
-  const [backendAuthLoading, setBackendAuthLoading] = useState(false);
-  const [backendAuthError, setBackendAuthError] = useState("");
-  const backendSessionRef = useRef<{
+  const hasBackendConfig = hasBackendApiConfig();
+
+  const sessionRef = useRef<{
     inFlight: Promise<boolean> | null;
     lastCheckedAt: number;
     lastResult: boolean;
-    account: string;
-  }>({
-    inFlight: null,
-    lastCheckedAt: 0,
-    lastResult: false,
-    account: "",
-  });
-  const { open } = useAppKit();
-  const { address, chainId, isConnected } = useAccount();
-  const { disconnectAsync } = useDisconnect();
-  const { signMessageAsync } = useSignMessage();
-  const { switchChainAsync, isPending: isSwitchPending } = useSwitchChain();
+  }>({ inFlight: null, lastCheckedAt: 0, lastResult: false });
 
-  const chainIdHex = toHexChainId(chainId);
-  const account = address || "";
-  const normalizedAccount = account.toLowerCase();
-  const hasMonadConfig = hasMonadChainConfig();
-  const hasBackendConfig = hasBackendApiConfig();
-  const isMonadChain =
-    hasMonadConfig &&
-    chainIdHex.toLowerCase() === (MONAD_CHAIN.chainIdHex || "").toLowerCase();
-  const isConnecting = isAppKitOpening || isSwitchPending;
-  const isBackendAuthenticated =
-    Boolean(backendAddress) &&
-    Boolean(normalizedAccount) &&
-    backendAddress.toLowerCase() === normalizedAccount;
+  // On mount, try to restore session from existing cookie
+  useEffect(() => {
+    void refreshBackendSession();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  async function connectWallet() {
-    setError("");
-    setIsAppKitOpening(true);
-
-    try {
-      await ensureAppKitInitialized();
-      await open();
-    } catch (connectError) {
-      setError(
-        toUserFacingWalletError(connectError, "Failed to open wallet modal.", {
-          userRejectedMessage: "Connect wallet was canceled.",
-        }),
-      );
-    } finally {
-      setIsAppKitOpening(false);
-    }
-  }
-
-  async function disconnectWallet() {
-    setError("");
-    setBackendAddress("");
-    setBackendAuthError("");
-
-    try {
-      await disconnectAsync();
-    } catch {
-      // Keep frontend state cleared even if the wallet adapter throws.
-    }
-
-    if (hasBackendConfig) {
-      await logoutBackend();
-    }
-  }
-
-  async function addMonadChainToWallet() {
-    const provider = getEip1193Provider();
-    if (!provider) {
-      setError("EVM wallet not detected.");
-      return;
-    }
-
-    await provider.request({
-      method: "wallet_addEthereumChain",
-      params: [
-        {
-          chainId: MONAD_CHAIN.chainIdHex,
-          chainName: MONAD_CHAIN.chainName,
-          nativeCurrency: MONAD_CHAIN.nativeCurrency,
-          rpcUrls: MONAD_CHAIN.rpcUrls,
-          blockExplorerUrls: MONAD_CHAIN.blockExplorerUrls,
-        },
-      ],
-    });
-  }
-
-  async function switchToMonad() {
-    if (!isConnected) {
-      setError("Connect wallet first before switching chain.");
-      return;
-    }
-
-    if (!hasMonadConfig) {
-      setError(
-        "Monad config is incomplete. Fill the variables in frontend/.env.local.",
-      );
-      return;
-    }
-
-    setError("");
-
-    try {
-      await switchChainAsync({ chainId: MONAD_CHAIN.chainIdDecimal });
-      return;
-    } catch (switchError) {
-      const switchCode = readSwitchErrorCode(switchError);
-      const shouldTryAddChain =
-        switchCode === 4902 ||
-        readErrorMessage(switchError, "")
-          .toLowerCase()
-          .includes("unrecognized");
-
-      if (!shouldTryAddChain) {
-        setError(
-          toUserFacingWalletError(switchError, "Failed to switch to Monad chain.", {
-            userRejectedMessage: "Chain switch was canceled in wallet.",
-          }),
-        );
-        return;
-      }
-    }
-
-    try {
-      await addMonadChainToWallet();
-      await switchChainAsync({ chainId: MONAD_CHAIN.chainIdDecimal });
-    } catch (addChainError) {
-      setError(
-        toUserFacingWalletError(
-          addChainError,
-          "Failed to add Monad chain.",
-          {
-            userRejectedMessage: "Adding chain was canceled in wallet.",
-          },
-        ),
-      );
-    }
-  }
-
-  async function refreshBackendSession() {
-    if (!hasBackendConfig) {
-      setBackendAddress("");
-      return false;
-    }
+  async function refreshBackendSession(): Promise<boolean> {
+    if (!hasBackendConfig) return false;
 
     const now = Date.now();
-    const snapshot = backendSessionRef.current;
-    const sameAccount = snapshot.account === normalizedAccount;
-    const cooldownMs = snapshot.lastResult ? 12_000 : 4_000;
+    const snap = sessionRef.current;
+    if (snap.inFlight) return snap.inFlight;
+    if (now - snap.lastCheckedAt < 4_000) return snap.lastResult;
 
-    if (snapshot.inFlight) {
-      return snapshot.inFlight;
-    }
-
-    if (sameAccount && now - snapshot.lastCheckedAt < cooldownMs) {
-      return snapshot.lastResult;
-    }
-
-    const task = (async () => {
-      setBackendAuthLoading(true);
+    const task = (async (): Promise<boolean> => {
       try {
         const response = await backendFetch<{
           authenticated: boolean;
           address: string;
         }>("/auth/me");
-        const sessionAddress = response.address?.toLowerCase?.() || "";
-        if (
-          !sessionAddress ||
-          (normalizedAccount && sessionAddress !== normalizedAccount)
-        ) {
-          setBackendAddress("");
-          backendSessionRef.current = {
-            inFlight: null,
-            lastCheckedAt: Date.now(),
-            lastResult: false,
-            account: normalizedAccount,
-          };
-          return false;
-        }
 
-        setBackendAddress(sessionAddress);
-        setBackendAuthError("");
-        backendSessionRef.current = {
-          inFlight: null,
-          lastCheckedAt: Date.now(),
-          lastResult: true,
-          account: normalizedAccount,
-        };
-        return true;
+        if (response.authenticated && response.address) {
+          setAccount(response.address.toLowerCase());
+          sessionRef.current = { inFlight: null, lastCheckedAt: Date.now(), lastResult: true };
+          return true;
+        }
+        setAccount("");
+        sessionRef.current = { inFlight: null, lastCheckedAt: Date.now(), lastResult: false };
+        return false;
       } catch {
-        setBackendAddress("");
-        backendSessionRef.current = {
-          inFlight: null,
-          lastCheckedAt: Date.now(),
-          lastResult: false,
-          account: normalizedAccount,
-        };
+        setAccount("");
+        sessionRef.current = { inFlight: null, lastCheckedAt: Date.now(), lastResult: false };
         return false;
       } finally {
-        setBackendAuthLoading(false);
+        sessionRef.current.inFlight = null;
       }
     })();
 
-    backendSessionRef.current = {
-      ...backendSessionRef.current,
-      inFlight: task,
-      account: normalizedAccount,
-    };
-
+    sessionRef.current = { ...sessionRef.current, inFlight: task };
     return task;
   }
 
-  async function authenticateBackend() {
-    if (!hasBackendConfig) {
-      setBackendAuthError(
-        "Backend config is incomplete. Set NEXT_PUBLIC_BACKEND_API_URL first.",
-      );
-      return false;
-    }
-    if (!isConnected || !account) {
-      setBackendAuthError("Connect wallet first before signing in to backend.");
-      return false;
-    }
-
-    setBackendAuthLoading(true);
-    setBackendAuthError("");
-
+  async function connectWallet(): Promise<void> {
+    setError("");
+    setIsConnecting(true);
     try {
+      if (!window.ethereum) {
+        setError("Please install Rabby wallet to play.");
+        return;
+      }
+
+      const accounts = await window.ethereum.request({
+        method: "eth_requestAccounts",
+      }) as string[];
+
+      const address = accounts[0];
+      if (!address) {
+        setError("No account found. Please unlock your wallet.");
+        return;
+      }
+
+      // Fetch nonce and request signature
       const { nonce } = await backendFetch<{ nonce: string }>("/auth/nonce");
-      const domain = window.location.host;
-      const origin = window.location.origin;
-      const chainIdToUse = chainId || MONAD_CHAIN.chainIdDecimal || 10143;
-      const statement = "Sign in to Pass Chick backend.";
-      const siweMessage = new SiweMessage({
-        domain,
-        address: account,
-        statement,
-        uri: origin,
-        version: "1",
-        chainId: chainIdToUse,
-        nonce,
-      });
-      const message = siweMessage.prepareMessage();
-      const signature = await signMessageAsync({ message });
+      const message = `Sign in to Rial Chick\nNonce: ${nonce}`;
+      const signature = await window.ethereum.request({
+        method: "personal_sign",
+        params: [message, address],
+      }) as string;
 
-      await backendPost<{ success: boolean; address: string }>("/auth/verify", {
-        message,
-        signature,
-      });
-
-      const nextAddress = account.toLowerCase();
-      setBackendAddress(nextAddress);
-      setBackendAuthError("");
-      backendSessionRef.current = {
-        inFlight: null,
-        lastCheckedAt: Date.now(),
-        lastResult: true,
-        account: nextAddress,
-      };
-      return true;
-    }
-    catch (authError) {
-      setBackendAddress("");
-      backendSessionRef.current = {
-        inFlight: null,
-        lastCheckedAt: Date.now(),
-        lastResult: false,
-        account: normalizedAccount,
-      };
-      setBackendAuthError(
-        toUserFacingWalletError(authError, "Failed to authenticate with backend.", {
-          userRejectedMessage: "Backend sign-in was canceled in wallet.",
-        }),
+      const response = await backendPost<{ success: boolean; address: string }>(
+        "/auth/verify",
+        { username: address, signature, message, nonce },
       );
-      return false;
+
+      if (response.success && response.address) {
+        setAccount(response.address.toLowerCase());
+        sessionRef.current = { inFlight: null, lastCheckedAt: Date.now(), lastResult: true };
+      }
+    } catch (err) {
+      const msg =
+        err && typeof err === "object" && "message" in err
+          ? String((err as { message?: string }).message || "")
+          : "";
+      setError(msg || "Connection failed. Please unlock your wallet and try again.");
     } finally {
-      setBackendAuthLoading(false);
+      setIsConnecting(false);
     }
   }
 
-  async function ensureBackendSession() {
-    if (!hasBackendConfig) {
-      return false;
-    }
-    if (isBackendAuthenticated) {
-      return true;
-    }
-
-    const hasExistingSession = await refreshBackendSession();
-    if (hasExistingSession) {
-      return true;
-    }
-
-    return authenticateBackend();
-  }
-
-  async function logoutBackend() {
-    if (!hasBackendConfig) {
-      setBackendAddress("");
-      return;
-    }
-
+  async function logoutBackend(): Promise<void> {
     try {
       await backendPost<{ success: boolean }>("/auth/logout");
     } catch {
-      // Ignore logout failures on local dev; frontend state is still cleared.
-    } finally {
-      setBackendAddress("");
-      setBackendAuthError("");
-      setBackendAuthLoading(false);
+      // Ignore logout failures on local dev
     }
   }
 
-  useEffect(() => {
-    if (!isConnected) {
-      setError("");
-      setBackendAddress("");
-      setBackendAuthError("");
-    }
-  }, [isConnected]);
+  async function disconnectWallet(): Promise<void> {
+    setError("");
+    setAccount("");
+    sessionRef.current = { inFlight: null, lastCheckedAt: 0, lastResult: false };
+    await logoutBackend();
+  }
 
-  useEffect(() => {
-    if (!hasBackendConfig || !isConnected || !account) {
-      setBackendAddress("");
-      return;
-    }
+  async function authenticateBackend(): Promise<boolean> {
+    if (account) return true;
+    await connectWallet();
+    return Boolean(account);
+  }
 
-    void refreshBackendSession();
-  }, [account, hasBackendConfig, isConnected]);
+  async function ensureBackendSession(): Promise<boolean> {
+    if (account) return true;
+    const existing = await refreshBackendSession();
+    if (existing) return true;
+    await connectWallet();
+    return Boolean(account);
+  }
+
+  const isConnected = Boolean(account);
+  const isBackendAuthenticated = isConnected;
 
   const value = useMemo<WalletContextValue>(
     () => ({
       account,
-      chainIdHex,
-      isMonadChain,
+      chainIdHex: "",
+      isMonadChain: isConnected, // always "on chain" in mock mode when logged in
       isConnecting,
       error,
       connectWallet,
       disconnectWallet,
-      switchToMonad,
+      switchToMonad: async () => {}, // noop in mock mode
       clearWalletError: () => setError(""),
-      hasMonadChainConfig: hasMonadConfig,
-      monadChainIdHex: MONAD_CHAIN.chainIdHex,
-      monadChainName: MONAD_CHAIN.chainName,
+      hasMonadChainConfig: true,
+      monadChainIdHex: "",
+      monadChainName: "Mock Mode",
       backendApiUrl: BACKEND_API_URL,
       hasBackendApiConfig: hasBackendConfig,
       isBackendAuthenticated,
-      isBackendAuthLoading: backendAuthLoading,
-      backendAuthError,
+      isBackendAuthLoading: false,
+      backendAuthError: "",
       authenticateBackend,
       ensureBackendSession,
       logoutBackend,
       refreshBackendSession,
     }),
-    [
-      account,
-      backendAuthError,
-      backendAuthLoading,
-      chainIdHex,
-      error,
-      hasBackendConfig,
-      hasMonadConfig,
-      isBackendAuthenticated,
-      isConnecting,
-      isMonadChain,
-    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [account, isConnecting, error, hasBackendConfig, isBackendAuthenticated],
   );
 
   return (

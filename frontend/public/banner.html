@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;padding:0;background:#0a0420;overflow:hidden;width:100%;height:100%;}
+  *, *::before, *::after { image-rendering: pixelated; }
+  #root { position:absolute; inset:0; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="/animations.jsx"></script>
+<script type="text/babel" src="/rial-scenes.jsx"></script>
+<script type="text/babel">
+  const STAGE_W = 1920;
+  const STAGE_H = 360;
+  const DURATION = 30;
+
+  const TWEAKS = { mood: 'neon', density: 'busy', camera: 'drift' };
+
+  function BannerApp() {
+    const [time, setTime] = React.useState(0);
+    const [scale, setScale] = React.useState(1);
+    const rafRef = React.useRef(null);
+    const lastTsRef = React.useRef(null);
+
+    React.useEffect(() => {
+      const step = (ts) => {
+        if (lastTsRef.current == null) lastTsRef.current = ts;
+        const dt = (ts - lastTsRef.current) / 1000;
+        lastTsRef.current = ts;
+        setTime(t => (t + dt) % DURATION);
+        rafRef.current = requestAnimationFrame(step);
+      };
+      rafRef.current = requestAnimationFrame(step);
+      return () => cancelAnimationFrame(rafRef.current);
+    }, []);
+
+    React.useEffect(() => {
+      const measure = () => {
+        const s = Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H);
+        setScale(Math.max(0.05, s));
+      };
+      measure();
+      window.addEventListener('resize', measure);
+      return () => window.removeEventListener('resize', measure);
+    }, []);
+
+    const ctx = React.useMemo(() => ({ time, duration: DURATION, playing: true }), [time]);
+
+    return (
+      <TweakContext.Provider value={TWEAKS}>
+        <TimelineContext.Provider value={ctx}>
+          <div style={{
+            position: 'absolute', inset: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: '#0a0420',
+            overflow: 'hidden',
+          }}>
+            <div style={{
+              width: STAGE_W,
+              height: STAGE_H,
+              transform: `scale(${scale})`,
+              transformOrigin: 'center',
+              flexShrink: 0,
+              overflow: 'hidden',
+            }}>
+              <RialChickWorld stageW={STAGE_W} stageH={STAGE_H}/>
+            </div>
+          </div>
+        </TimelineContext.Provider>
+      </TweakContext.Provider>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById('root')).render(<BannerApp/>);
+</script>
+</body>
+</html>

@@ -14,6 +14,11 @@ import {
   getSettlementRelayerAddress,
   submitSettlementOnchain,
 } from "../services/settlementExecutor.js";
+import {
+  getSegmentRemainingMs,
+  getCurrentDecayBp,
+  getCpStayRemainingMs,
+} from "../services/timerAuthority.js";
 
 const router = Router();
 const settlementPublicClient = createPublicClient({
@@ -511,8 +516,31 @@ async function isCurrentOnchainPendingSettlement(session: Record<string, unknown
 router.get("/active", requireAuth, async (req: Request, res: Response) => {
   const walletAddress = req.walletAddress!;
 
-  if (hasActiveGame(walletAddress)) {
-    res.json({ hasActiveGame: true });
+  const inMemoryGame = getGameByWallet(walletAddress);
+  if (inMemoryGame) {
+    const now = Date.now();
+    const effectiveMultiplierBp = inMemoryGame.timer.segmentActive
+      ? getEffectiveMultiplierBp(inMemoryGame.multiplierBp, inMemoryGame.timer.segmentStart, now)
+      : inMemoryGame.multiplierBp;
+    res.json({
+      hasActiveGame: true,
+      snapshot: {
+        sessionId: inMemoryGame.sessionId,
+        onchainSessionId: inMemoryGame.onchainSessionId,
+        stake: inMemoryGame.stake,
+        stakeAmountUnits: usdcToUint256(inMemoryGame.stake).toString(),
+        row: inMemoryGame.currentRow,
+        maxRow: inMemoryGame.maxRow,
+        multiplierBp: effectiveMultiplierBp,
+        multiplier: (effectiveMultiplierBp / 10000).toFixed(4),
+        cp: inMemoryGame.currentCp,
+        cashoutWindow: inMemoryGame.cashoutWindow,
+        segmentRemainingMs: getSegmentRemainingMs(inMemoryGame.timer, now),
+        cpStayRemainingMs: getCpStayRemainingMs(inMemoryGame.timer, now),
+        decayBp: getCurrentDecayBp(inMemoryGame.timer, now),
+        serverTime: now,
+      },
+    });
     return;
   }
 

@@ -1,13 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { formatUnits, isAddress } from "viem";
-import type { Address } from "viem";
-import { useReadContract } from "wagmi";
 import { useWallet } from "../components/web3/WalletProvider";
 import { backendFetch } from "../lib/backend/api";
 import { hasBackendApiConfig } from "../lib/backend/config";
-import { ERC20_ABI, USDC_ADDRESS, USDC_DECIMALS } from "../lib/web3/contracts";
 
 type ProfitLeaderboardEntry = {
   wallet_address: string;
@@ -17,7 +13,6 @@ type ProfitLeaderboardEntry = {
   total_losses?: number | string | null;
 };
 
-const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as Address;
 const HOME_CONNECT_PROMPT_KEY = "chicken-home-connect-prompt";
 
 const FALLBACK_DISTANCE_BOARD: ChickenBridgeLeaderboardEntry[] = [
@@ -67,40 +62,40 @@ const ABOUT_FEATURES = [
     title: "FAST ARCADE STAKES",
     copy: "Connect, run, and feel the multiplier rise before the crash catches up.",
     tone: "risk",
-    imageSrc: "/images/about-stakes.png",
-    imageAlt: "Pass Chick arcade stakes preview",
+    imageSrc: "/images/feature-1.mp4",
+    imageAlt: "Rial Chick arcade stakes preview",
   },
   {
     title: "CHECKPOINT CASH OUTS",
     copy: "Cash out at checkpoints or keep pushing for a bigger payout.",
     tone: "checkpoint",
-    imageSrc: "/images/about-stakes.png",
-    imageAlt: "Pass Chick checkpoint cash out preview",
+    imageSrc: "/images/feature-2.mp4",
+    imageAlt: "Rial Chick checkpoint cash out preview",
   },
   {
-    title: "MONAD WALLET FLOW",
-    copy: "From faucet to deposit to live play, the Monad flow stays quick and simple.",
+    title: "RIALO WALLET FLOW",
+    copy: "From faucet to live play, the Rialo flow stays quick and simple.",
     tone: "wallet",
-    imageSrc: "/images/about-stakes.png",
-    imageAlt: "Pass Chick wallet flow preview",
+    imageSrc: "/images/feature-3.mp4",
+    imageAlt: "Rial Chick wallet flow preview",
   },
 ];
 
 const FLOW_STEPS = [
   {
     label: "STEP 1",
-    title: "Faucet + Deposit",
-    copy: "Mint mock USDC from faucet, then deposit to vault as your playable balance.",
+    title: "Faucet + Play",
+    copy: "Claim faucet to get Rial Chick Token, use it as your playable balance.",
   },
   {
     label: "STEP 2",
     title: "Run Session",
-    copy: "Start a live run with stake from vault balance. Backend tracks checkpoints and anti-cheat rules.",
+    copy: "Start a live run with stake from your balance. Backend tracks checkpoints and anti-cheat rules.",
   },
   {
     label: "STEP 3",
     title: "Signed Settlement",
-    copy: "Result is settled onchain with backend signature. Win goes back to vault balance automatically.",
+    copy: "Result is validated by backend signature. Win goes back to your balance automatically.",
   },
 ];
 
@@ -153,16 +148,20 @@ function readBestMultiplier(entry: ChickenBridgeLeaderboardEntry) {
 export default function Home() {
   const {
     account,
-    isMonadChain,
     isConnecting,
     error,
     connectWallet,
     clearWalletError,
     disconnectWallet,
   } = useWallet();
+  const [playerBalance, setPlayerBalance] = useState<number | null>(null);
   const [showProfilePopover, setShowProfilePopover] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
-  const [showHeroConnectPrompt, setShowHeroConnectPrompt] = useState(false);
+  const [publicStats, setPublicStats] = useState<{
+    total_players: number;
+    total_games: number;
+    total_cashouts: number;
+  } | null>(null);
   const [distanceBoard, setDistanceBoard] = useState<
     ChickenBridgeLeaderboardEntry[]
   >(FALLBACK_DISTANCE_BOARD);
@@ -173,25 +172,6 @@ export default function Home() {
   const profileWrapRef = useRef<HTMLDivElement | null>(null);
 
   const isConnected = Boolean(account);
-  const ownerAddress = isAddress(account) ? (account as Address) : undefined;
-  const usdcAddress = isAddress(USDC_ADDRESS)
-    ? (USDC_ADDRESS as Address)
-    : undefined;
-
-  const { data: walletUsdcData } = useReadContract({
-    address: usdcAddress || ZERO_ADDRESS,
-    abi: ERC20_ABI,
-    functionName: "balanceOf",
-    args: [ownerAddress || ZERO_ADDRESS],
-    query: {
-      enabled: Boolean(isConnected && ownerAddress && usdcAddress),
-    },
-  });
-
-  const walletUsdcDisplay =
-    walletUsdcData === undefined
-      ? "-"
-      : formatUnits(walletUsdcData, USDC_DECIMALS);
 
   function scrollToSection(sectionId: string) {
     document.getElementById(sectionId)?.scrollIntoView({
@@ -277,25 +257,34 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (isConnected) {
-      setShowHeroConnectPrompt(false);
+    if (!isConnected) { setPlayerBalance(null); return; }
+    void backendFetch<{ balance?: number }>("/auth/me")
+      .then((me) => setPlayerBalance(Number(me.balance ?? 0)))
+      .catch(() => setPlayerBalance(null));
+  }, [isConnected, account]);
+
+  useEffect(() => {
+    function fetchStats() {
+      void backendFetch<{ total_players: number; total_games: number; total_cashouts: number }>(
+        "/api/stats/public",
+      )
+        .then(setPublicStats)
+        .catch(() => {});
     }
-  }, [isConnected]);
+    fetchStats();
+    const interval = setInterval(fetchStats, 30_000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
-    const shouldOpenFromQuery = params.get("connect") === "1";
-    const shouldOpenFromLogout =
+    const shouldScrollFromQuery = params.get("connect") === "1";
+    const shouldScrollFromLogout =
       window.sessionStorage.getItem(HOME_CONNECT_PROMPT_KEY) === "1";
 
-    if ((!shouldOpenFromQuery && !shouldOpenFromLogout) || isConnected) {
-      return;
-    }
+    if (!shouldScrollFromQuery && !shouldScrollFromLogout) return;
 
-    setShowHeroConnectPrompt(true);
-    setShowProfilePopover(false);
-    clearWalletError();
     window.sessionStorage.removeItem(HOME_CONNECT_PROMPT_KEY);
     window.scrollTo({ top: 0, behavior: "auto" });
 
@@ -305,30 +294,12 @@ export default function Home() {
       nextSearch ? `?${nextSearch}` : ""
     }${window.location.hash}`;
     window.history.replaceState({}, "", nextUrl);
-  }, [clearWalletError, isConnected]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function onLogout() {
     disconnectWallet();
     setShowProfilePopover(false);
-  }
-
-  function openHeroConnectPrompt() {
-    setShowHeroConnectPrompt(true);
-    setShowProfilePopover(false);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  function onHeroPlayNow() {
-    if (isConnected) {
-      window.location.href = "/play";
-      return;
-    }
-    openHeroConnectPrompt();
-  }
-
-  function onHeroBack() {
-    setShowHeroConnectPrompt(false);
-    clearWalletError();
   }
 
   const trackedRuns = profitBoard.reduce(
@@ -420,8 +391,7 @@ export default function Home() {
         <div className="home-brand">
           <div className="home-brand-badge">GM</div>
           <div className="home-brand-copy">
-            <p className="home-brand-eyebrow">Monad Arcade Risk Game</p>
-            <div className="home-brand-name">Pass Chick</div>
+            <p className="home-brand-eyebrow">The First Rialo Arcade Risk Game</p>
           </div>
         </div>
 
@@ -451,20 +421,9 @@ export default function Home() {
                         </span>
                       </div>
                       <div className="home-profile-row">
-                        <span className="home-profile-label">USDC</span>
+                        <span className="home-profile-label">BALANCE</span>
                         <span className="mono home-profile-value">
-                          {walletUsdcDisplay}
-                        </span>
-                      </div>
-                      <div className="home-profile-row">
-                        <span className="home-profile-label">Chain</span>
-                        <span
-                          className={`mono home-profile-value ${
-                            isMonadChain
-                              ? "home-profile-value-ready"
-                              : "home-profile-value-warning"
-                          }`}>
-                          {isMonadChain ? "MONAD READY" : "SWITCH TO MONAD"}
+                          {playerBalance === null ? "-" : `$${playerBalance.toFixed(2)}`}
                         </span>
                       </div>
                     </div>
@@ -493,8 +452,9 @@ export default function Home() {
               <button
                 className="flow-btn primary home-nav-login"
                 type="button"
-                onClick={openHeroConnectPrompt}>
-                LOGIN
+                onClick={() => void connectWallet()}
+                disabled={isConnecting}>
+                {isConnecting ? "CONNECTING..." : "LOGIN"}
               </button>
             )}
           </div>
@@ -515,12 +475,12 @@ export default function Home() {
         <div className="home-shell home-shell-wide">
           <div className="home-hero-grid">
             <div className="home-hero-copy">
-              <h1 className="home-title">PASS CHICK</h1>
+              <h1 className="home-title">RIAL CHICK</h1>
               <p className="home-subcopy">
                 Cross the road, stack the multiplier, and cash out before the
                 run crashes.
               </p>
-              {showHeroConnectPrompt && !isConnected ? (
+              {!isConnected ? (
                 <div className="home-hero-connect-stack">
                   <button
                     type="button"
@@ -529,49 +489,35 @@ export default function Home() {
                     disabled={isConnecting}>
                     {isConnecting ? "CONNECTING..." : "CONNECT WALLET"}
                   </button>
-                  <button
-                    type="button"
-                    className="flow-btn home-btn-main home-hero-back-btn"
-                    onClick={onHeroBack}
-                    disabled={isConnecting}>
-                    BACK
-                  </button>
                   {error ? (
                     <p className="flow-alert home-hero-connect-error">
                       {error}
                     </p>
                   ) : null}
                 </div>
-              ) : !isConnected ? (
-                <button
-                  type="button"
-                  className="flow-btn home-btn-main home-hero-cta"
-                  onClick={onHeroPlayNow}>
-                  PLAY NOW
-                </button>
               ) : null}
 
-              {isConnected && !showHeroConnectPrompt ? (
+              {isConnected ? (
                 <div className="home-hero-connected-actions">
                   <a
                     href="/play"
-                    className="flow-btn home-btn-main dashboard-btn dashboard-btn-play">
+                    className="dashboard-btn dashboard-btn-play">
                     PLAY NOW
                   </a>
                   <button
                     type="button"
-                    className="flow-btn home-btn-main dashboard-btn dashboard-btn-how"
+                    className="dashboard-btn dashboard-btn-how"
                     onClick={() => setShowHelp(true)}>
                     HOW TO PLAY
                   </button>
                   <a
                     href="/managemoney"
-                    className="flow-btn home-btn-main dashboard-btn dashboard-btn-deposit">
+                    className="dashboard-btn dashboard-btn-manage">
                     MANAGE MONEY
                   </a>
                   <button
                     type="button"
-                    className="flow-btn home-btn-main dashboard-btn dashboard-btn-logout"
+                    className="dashboard-btn dashboard-btn-logout"
                     onClick={onLogout}>
                     LOG OUT
                   </button>
@@ -582,14 +528,46 @@ export default function Home() {
         </div>
       </section>
 
+      <div className="home-banner-section" aria-hidden="true">
+        <iframe
+          src="/banner.html"
+          className="home-banner-frame"
+          title="Rial Chick World"
+          tabIndex={-1}
+        />
+      </div>
+
+      <div className="home-stats-bar">
+        <div className="home-stats-bar-item">
+          <span className="home-stats-bar-num">
+            {publicStats ? publicStats.total_players.toLocaleString() : "—"}
+          </span>
+          <span className="home-stats-bar-label">PLAYERS</span>
+        </div>
+        <div className="home-stats-bar-divider" aria-hidden="true" />
+        <div className="home-stats-bar-item">
+          <span className="home-stats-bar-num">
+            {publicStats ? publicStats.total_games.toLocaleString() : "—"}
+          </span>
+          <span className="home-stats-bar-label">GAMES PLAYED</span>
+        </div>
+        <div className="home-stats-bar-divider" aria-hidden="true" />
+        <div className="home-stats-bar-item">
+          <span className="home-stats-bar-num">
+            {publicStats ? publicStats.total_cashouts.toLocaleString() : "—"}
+          </span>
+          <span className="home-stats-bar-label">CASHOUTS</span>
+        </div>
+      </div>
+
       <section id="preview" className="home-section home-section-about">
         <div className="home-shell home-shell-section">
           <div className="home-about-head">
             <h2 className="home-section-title home-about-title">
-              WHAT IS PASS CHICK?
+              WHAT IS RIAL CHICK?
             </h2>
             <p className="home-about-copy">
-              Pass Chick is a fast risk-reward demo where players cross
+              Rial Chick is a fast risk-reward demo where players cross
               lanes, stack multiplier, and choose when to cash out.
             </p>
           </div>
@@ -600,10 +578,13 @@ export default function Home() {
                 <div
                   className={`home-about-media home-about-media-${item.tone}`}>
                   {item.imageSrc ? (
-                    <img
-                      className="home-about-image"
+                    <video
                       src={item.imageSrc}
-                      alt={item.imageAlt || item.title}
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      style={{ width: "100%", borderRadius: "inherit" }}
                     />
                   ) : (
                     <div
@@ -687,7 +668,7 @@ export default function Home() {
       <section className="home-section home-section-system">
         <div className="home-shell home-shell-section">
           <div className="home-section-head">
-            <h2 className="home-section-title">ONCHAIN GAME FLOW</h2>
+            <h2 className="home-section-title">GAME FLOW</h2>
           </div>
           <div className="home-feature-grid">
             {FLOW_STEPS.map((step) => (
@@ -709,8 +690,7 @@ export default function Home() {
               </p>
             </div>
             <p>
-              Live contracts: USDC + Faucet + Vault + Settlement + Passport on
-              Monad Testnet.
+              Coming soon on Rialo Devnet.
             </p>
           </div>
         </div>
@@ -719,7 +699,10 @@ export default function Home() {
       <section className="home-section home-section-passport">
         <div className="home-shell home-shell-section">
           <div className="home-section-head">
-            <h2 className="home-section-title">PASSPORT FOR PARTNER APPS</h2>
+            <h2 className="home-section-title">
+              PASSPORT FOR PARTNER APPS
+              <span className="home-coming-soon-badge">COMING SOON</span>
+            </h2>
           </div>
           <div className="home-feature-grid">
             {PASSPORT_FEATURES.map((item) => (
@@ -745,9 +728,9 @@ export default function Home() {
       <footer className="home-footer">
         <div className="home-shell home-footer-shell">
           <div>
-            <p className="home-preview-title">PASS CHICK</p>
+            <p className="home-preview-title">RIAL CHICK</p>
             <h3 className="home-footer-title">
-              Fast arcade risk demo for Monad hackathon energy.
+              The first arcade risk game on Rialo devnet.
             </h3>
           </div>
 

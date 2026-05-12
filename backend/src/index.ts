@@ -11,14 +11,15 @@ import gameRoutes from "./routes/game.js";
 import leaderboardRoutes from "./routes/leaderboard.js";
 import playerRoutes from "./routes/player.js";
 import passportRoutes from "./routes/passport.js";
+import statsRoutes from "./routes/stats.js";
 import { getActiveGameCount } from "./services/gameState.js";
 
 /**
  * ════════════════════════════════════════════════════════════
- * Pass Chick — Backend Server
+ * Rial Chick — Backend Server
  * ════════════════════════════════════════════════════════════
  *
- * Express.js + Socket.io server for the Pass Chick game.
+ * Express.js + Socket.io server for the Rial Chick game.
  *
  * Responsibilities:
  *   1. SIWE Authentication (wallet-based login)
@@ -83,6 +84,9 @@ app.use("/api/player", playerRoutes);
 // Trust passport
 app.use("/api/passport", passportRoutes);
 
+// Public aggregate stats
+app.use("/api/stats", statsRoutes);
+
 // 404 fallback
 app.use((_req, res) => {
   res.status(404).json({ error: "Not found" });
@@ -100,7 +104,7 @@ const io = setupGameGateway(httpServer);
 httpServer.listen(env.PORT, "0.0.0.0", () => {
   console.log("");
   console.log("════════════════════════════════════════════════════");
-  console.log("  🐔 Pass Chick Backend");
+  console.log("  🐔 Rial Chick Backend");
   console.log("════════════════════════════════════════════════════");
   console.log(`  HTTP Server:    http://localhost:${env.PORT}`);
   console.log(`  WebSocket:      ws://localhost:${env.PORT}`);

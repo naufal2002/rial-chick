@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { SiweMessage } from "siwe";
+import { createHash } from "node:crypto";
+import { verifyMessage } from "viem";
 import {
   generateNonce,
-  consumeNonce,
   generateSessionToken,
   createSession,
   deleteSession,
@@ -15,7 +15,7 @@ const router = Router();
 
 /**
  * GET /auth/nonce
- * Generate a random nonce for SIWE message.
+ * Generate a random nonce (kept for API compatibility).
  */
 router.get("/nonce", (_req, res) => {
   const nonce = generateNonce();
@@ -24,43 +24,49 @@ router.get("/nonce", (_req, res) => {
 
 /**
  * POST /auth/verify
- * Verify a SIWE signature and create an authenticated session.
- *
- * Body: { message: string, signature: string }
+ * Mock mode: accept { username } and create a session with a deterministic fake address.
  */
 router.post("/verify", async (req, res) => {
   try {
-    const { message, signature } = req.body;
+    const { username, signature, message } = req.body;
 
-    if (!message || !signature) {
-      res.status(400).json({ error: "Missing message or signature." });
+    if (!username || typeof username !== "string" || !username.trim()) {
+      res.status(400).json({ error: "Missing username." });
       return;
     }
 
-    // Parse and verify the SIWE message
-    const siweMessage = new SiweMessage(message);
-    const result = await siweMessage.verify({ signature });
+    const cleanUsername = username.trim().toLowerCase();
 
-    if (!result.success) {
-      res.status(401).json({ error: "Invalid signature." });
-      return;
+    let walletAddress: string;
+
+    if (signature && message) {
+      // Wallet login: verify EIP-191 personal_sign signature
+      const isValid = await verifyMessage({
+        address: cleanUsername as `0x${string}`,
+        message,
+        signature: signature as `0x${string}`,
+      });
+
+      if (!isValid) {
+        res.status(401).json({ error: "Invalid signature." });
+        return;
+      }
+
+      walletAddress = cleanUsername;
+      console.log(`✅ Wallet login (sig verified): ${walletAddress}`);
+    } else {
+      // Mock username login: derive deterministic fake address from hash
+      const hash = createHash("sha256").update(cleanUsername).digest("hex");
+      walletAddress = `0x${hash.slice(0, 40)}`;
+      console.log(`✅ Mock login: "${cleanUsername}" → ${walletAddress}`);
     }
 
-    // Validate nonce
-    const nonceValid = consumeNonce(result.data.nonce);
-    if (!nonceValid) {
-      res.status(401).json({ error: "Invalid or expired nonce." });
-      return;
-    }
-
-    const walletAddress = result.data.address.toLowerCase();
-
-    // Upsert player in database
+    // Upsert player — ignoreDuplicates: true so balance is only set to 1000 for new players
     const { error: dbError } = await supabase
       .from("players")
       .upsert(
-        { wallet_address: walletAddress },
-        { onConflict: "wallet_address" }
+        { wallet_address: walletAddress, balance: 1000 },
+        { onConflict: "wallet_address", ignoreDuplicates: true }
       );
 
     if (dbError) {
@@ -70,19 +76,16 @@ router.post("/verify", async (req, res) => {
         hint: dbError.hint,
         code: dbError.code,
       });
-      // Don't block auth for DB errors in hackathon, but we'll know it failed.
     }
 
-    // Create session
     const token = generateSessionToken();
     createSession(token, walletAddress);
 
-    // Set HttpOnly cookie
     res.cookie(SESSION_COOKIE, token, {
       httpOnly: true,
       secure: env.NODE_ENV === "production",
       sameSite: env.NODE_ENV === "production" ? "none" : "lax",
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      maxAge: 24 * 60 * 60 * 1000,
       path: "/",
     });
 
@@ -117,12 +120,19 @@ router.post("/logout", (req, res) => {
 
 /**
  * GET /auth/me
- * Check current session status.
+ * Check current session and return address + balance for mock mode.
  */
-router.get("/me", requireAuth, (req, res) => {
+router.get("/me", requireAuth, async (req, res) => {
+  const { data: player } = await supabase
+    .from("players")
+    .select("balance")
+    .eq("wallet_address", req.walletAddress)
+    .maybeSingle();
+
   res.json({
     authenticated: true,
     address: req.walletAddress,
+    balance: Number(player?.balance ?? 1000),
   });
 });
 

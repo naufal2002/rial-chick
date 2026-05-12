@@ -120,7 +120,7 @@ export function GameCanvas({ backgroundMode = false }: GameCanvasProps) {
             X
           </button>
           <h2>PLACE YOUR BET</h2>
-          <p className="subtitle">Mock USD - Testnet Demo</p>
+          <p className="subtitle">Rial Chick Token - Rialo Devnet</p>
 
           <div className="field">
             <label>STAKE ($)</label>
@@ -244,6 +244,23 @@ export function GameCanvas({ backgroundMode = false }: GameCanvasProps) {
               MANAGE MONEY
               MANAGE MONEY
             </a>
+          </div>
+        </div>
+      </div>
+
+      <div id="session-recovery-modal" className="modal-bg" style={{ display: "none" }}>
+        <div className="modal-box modal-box-recover">
+          <h2 className="modal-title">SESI BERLANJUT</h2>
+          <p id="session-recovery-info" className="subtitle">
+            Kamu punya sesi game yang belum selesai.
+          </p>
+          <div className="modal-actions">
+            <button id="session-recovery-continue" className="primary">
+              Lanjutkan
+            </button>
+            <button id="session-recovery-cancel" className="ghost">
+              Batalkan
+            </button>
           </div>
         </div>
       </div>

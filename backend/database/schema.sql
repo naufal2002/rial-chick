@@ -1,5 +1,5 @@
 -- ============================================================
--- Pass Chick — Database Schema for Supabase
+-- Rial Chick — Database Schema for Supabase
 -- Copy-paste this entire file into Supabase SQL Editor and run.
 -- ============================================================
 

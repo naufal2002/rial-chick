@@ -51,8 +51,7 @@ export function PlayTopNav() {
     authenticateBackend,
     hasBackendApiConfig,
   } = useWallet();
-  const [depositLabel, setDepositLabel] = useState("DEPOSIT");
-  const [isDepositBusy, setIsDepositBusy] = useState(false);
+  const [isFaucetBusy, setIsFaucetBusy] = useState(false);
   const [isWalletMenuOpen, setIsWalletMenuOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [sfxVolumePercent, setSfxVolumePercent] = useState(90);
@@ -72,10 +71,6 @@ export function PlayTopNav() {
   const statusTimeoutRef = useRef<number | null>(null);
 
   const isConnected = Boolean(account);
-
-  function openDepositModal() {
-    window.dispatchEvent(new CustomEvent("chicken:open-deposit-modal"));
-  }
 
   function dispatchStatusUpdate(detail: {
     message?: string;
@@ -226,6 +221,30 @@ export function PlayTopNav() {
     }
   }
 
+  async function onClaimFaucetClick() {
+    if (isFaucetBusy) return;
+    setIsFaucetBusy(true);
+    try {
+      const bridge = getBridgeApi();
+      await bridge.claimFaucet();
+      window.dispatchEvent(new CustomEvent("chicken:refresh-balance"));
+      dispatchStatusUpdate({
+        message: "FAUCET CLAIMED — +$1000 added to balance.",
+        tone: "ready",
+        durationMs: 3600,
+      });
+      setIsMenuOpen(false);
+    } catch (error) {
+      dispatchStatusUpdate({
+        message: readActionErrorMessage(error, "Failed to claim faucet."),
+        tone: "error",
+        durationMs: 4200,
+      });
+    } finally {
+      setIsFaucetBusy(false);
+    }
+  }
+
   function onLeaderboardMenuClick() {
     console.log("PlayTopNav: Leaderboard button clicked");
     setIsMenuOpen(false);
@@ -290,25 +309,6 @@ export function PlayTopNav() {
     }
   }
 
-  useEffect(() => {
-    function onDepositUiState(event: Event) {
-      const detail = (event as CustomEvent<{ label?: string; busy?: boolean }>)
-        .detail;
-      if (detail?.label) setDepositLabel(detail.label);
-      if (typeof detail?.busy === "boolean") setIsDepositBusy(detail.busy);
-    }
-
-    window.addEventListener(
-      "chicken:deposit-ui-state",
-      onDepositUiState as EventListener,
-    );
-    return () => {
-      window.removeEventListener(
-        "chicken:deposit-ui-state",
-        onDepositUiState as EventListener,
-      );
-    };
-  }, []);
 
   useEffect(() => {
     function onPlayBlocker(event: Event) {
@@ -681,6 +681,14 @@ export function PlayTopNav() {
                   </button>
                   <button
                     type="button"
+                    className="play-menu-modal-item menu-item-faucet"
+                    onClick={() => { void onClaimFaucetClick(); }}
+                    disabled={isFaucetBusy}
+                  >
+                    {isFaucetBusy ? "CLAIMING..." : "CLAIM FAUCET (+1000)"}
+                  </button>
+                  <button
+                    type="button"
                     className="play-menu-modal-item menu-item-passport-check"
                     onClick={() => {
                       void onCheckPassportClick();
@@ -744,11 +752,11 @@ export function PlayTopNav() {
       </div>
       <button
         type="button"
-        className={`play-nav-deposit${isDepositBusy ? " busy" : ""}`}
-        onClick={openDepositModal}
-        disabled={isDepositBusy}
+        className={`play-nav-faucet${isFaucetBusy ? " busy" : ""}`}
+        onClick={() => { void onClaimFaucetClick(); }}
+        disabled={isFaucetBusy}
       >
-        {depositLabel}
+        {isFaucetBusy ? "CLAIMING..." : "FAUCET"}
       </button>
       <div
         className={`play-status play-status-${statusTone}${isIdleReadyStatus ? " play-status-idle" : ""}`}

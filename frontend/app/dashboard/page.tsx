@@ -1,17 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { formatUnits, isAddress } from "viem";
-import type { Address } from "viem";
-import { useReadContract } from "wagmi";
 import { useWallet } from "../../components/web3/WalletProvider";
-import {
-  ERC20_ABI,
-  USDC_ADDRESS,
-  USDC_DECIMALS,
-} from "../../lib/web3/contracts";
+import { backendFetch } from "../../lib/backend/api";
 
-const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as Address;
 const HOME_CONNECT_PROMPT_KEY = "chicken-home-connect-prompt";
 
 function shortAddress(address: string) {
@@ -23,35 +15,24 @@ export default function DashboardPage() {
   const [showHelp, setShowHelp] = useState(false);
   const [showProfilePopover, setShowProfilePopover] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [playerBalance, setPlayerBalance] = useState<number | null>(null);
   const profileWrapRef = useRef<HTMLDivElement | null>(null);
   const {
     account,
-    isMonadChain,
     isConnecting,
     connectWallet,
     disconnectWallet,
   } = useWallet();
   const isConnected = Boolean(account);
   const showConnectedDashboardUi = isConnected && !isLoggingOut;
-  const ownerAddress = isAddress(account) ? (account as Address) : undefined;
-  const usdcAddress = isAddress(USDC_ADDRESS)
-    ? (USDC_ADDRESS as Address)
-    : undefined;
 
-  const { data: walletUsdcData } = useReadContract({
-    address: usdcAddress || ZERO_ADDRESS,
-    abi: ERC20_ABI,
-    functionName: "balanceOf",
-    args: [ownerAddress || ZERO_ADDRESS],
-    query: {
-      enabled: Boolean(isConnected && ownerAddress && usdcAddress),
-    },
-  });
-
-  const walletUsdcDisplay =
-    walletUsdcData === undefined
-      ? "-"
-      : formatUnits(walletUsdcData, USDC_DECIMALS);
+  // Load balance from backend (mock mode)
+  useEffect(() => {
+    if (!isConnected) { setPlayerBalance(null); return; }
+    void backendFetch<{ balance?: number }>("/auth/me")
+      .then((me) => setPlayerBalance(Number(me.balance ?? 0)))
+      .catch(() => setPlayerBalance(null));
+  }, [isConnected, account]);
 
   useEffect(() => {
     if (!showProfilePopover) return;
@@ -116,8 +97,7 @@ export default function DashboardPage() {
           <a className="home-brand" href="/">
             <span className="home-brand-badge">GM</span>
             <span className="home-brand-copy">
-              <p className="home-brand-eyebrow">Monad Arcade Risk Game</p>
-              <span className="home-brand-name">Pass Chick</span>
+              <p className="home-brand-eyebrow">The First Rialo Arcade Risk Game</p>
             </span>
           </a>
 
@@ -150,21 +130,9 @@ export default function DashboardPage() {
                           </span>
                         </div>
                         <div className="home-profile-row">
-                          <span className="home-profile-label">USDC</span>
+                          <span className="home-profile-label">BALANCE</span>
                           <span className="mono home-profile-value">
-                            {walletUsdcDisplay}
-                          </span>
-                        </div>
-                        <div className="home-profile-row">
-                          <span className="home-profile-label">Chain</span>
-                          <span
-                            className={`mono home-profile-value ${
-                              isMonadChain
-                                ? "home-profile-value-ready"
-                                : "home-profile-value-warning"
-                            }`}
-                          >
-                            {isMonadChain ? "MONAD READY" : "SWITCH TO MONAD"}
+                            {playerBalance === null ? "-" : `$${playerBalance.toFixed(2)}`}
                           </span>
                         </div>
                       </div>
@@ -207,7 +175,7 @@ export default function DashboardPage() {
         </header>
 
         <div className="dashboard-center">
-          <div className="dashboard-title" aria-label="Pass Chick">
+          <div className="dashboard-title" aria-label="Rial Chick">
             <span className="dashboard-title-line">CHICKEN</span>
             <span className="dashboard-title-line">MONAD</span>
           </div>
@@ -229,7 +197,7 @@ export default function DashboardPage() {
                 </button>
                 <a
                   href="/managemoney"
-                  className="flow-btn home-btn-main dashboard-btn dashboard-btn-deposit"
+                  className="flow-btn home-btn-main dashboard-btn dashboard-btn-manage"
                 >
                   MANAGE MONEY
                 </a>

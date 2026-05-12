@@ -3,10 +3,11 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { Web3Provider } from "../components/web3/Web3Provider";
 import { WalletProvider } from "../components/web3/WalletProvider";
+import SplashScreen from "../components/SplashScreen";
 
 export const metadata: Metadata = {
-  title: "Pass Chick | Monad Demo",
-  description: "Pass Chick game with mock betting HUD on Next.js.",
+  title: "Rial Chick | Rialo Devnet",
+  description: "Rial Chick game with mock betting HUD on Next.js.",
 };
 
 export const viewport: Viewport = {
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en">
       <body>
+        <SplashScreen />
         <Web3Provider>
           <WalletProvider>{children}</WalletProvider>
         </Web3Provider>

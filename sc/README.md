@@ -1,6 +1,6 @@
-# Pass Chick Smart Contracts
+# Rial Chick Smart Contracts
 
-This package contains the backend-authoritative onchain flow for Pass Chick on Monad testnet.
+This package contains the backend-authoritative onchain flow for Rial Chick on Monad testnet.
 All contracts are deployed as UUPS proxies (`ERC1967Proxy` + separate implementations).
 
 Included contracts:

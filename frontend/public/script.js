@@ -6,7 +6,7 @@ const tilesPerRow = maxTileIndex - minTileIndex + 1;
 const tileSize = 42;
 
 // ============================================================
-// BETTING SYSTEM (mock, in-memory + localStorage — Testnet Demo only)
+// BETTING SYSTEM (mock, in-memory + localStorage — Rialo Devnet Demo)
 // ============================================================
 
 const STEP_INCREMENT_BP = 250; // +0.025x per forward step
@@ -1076,6 +1076,37 @@ function resetBetAfterReconnectFailure() {
   showBetHud(false);
 }
 
+let _pendingRecoverySnapshot = null;
+let _resultAutoHideTimer = null;
+
+function showSessionRecoveryDialog(snapshot) {
+  _pendingRecoverySnapshot = snapshot;
+  const modal = document.getElementById("session-recovery-modal");
+  if (!modal) return;
+
+  const stake = Number(snapshot?.stake) || 0;
+  const cp = Number(snapshot?.cp) || 0;
+  const row = Number(snapshot?.row) || 0;
+  const multStr = (Number(snapshot?.multiplierBp || 0) / 10000).toFixed(2);
+
+  const infoEl = document.getElementById("session-recovery-info");
+  if (infoEl) {
+    infoEl.innerHTML = `Kamu punya sesi game yang belum selesai.<br>
+      Stake: <strong>$${stake.toFixed(2)}</strong> &nbsp;|&nbsp;
+      Row: <strong>${row}</strong> &nbsp;|&nbsp;
+      CP: <strong>${cp}</strong> &nbsp;|&nbsp;
+      Multiplier: <strong>${multStr}x</strong>`;
+  }
+
+  modal.style.display = "flex";
+}
+
+function hideSessionRecoveryDialog() {
+  const modal = document.getElementById("session-recovery-modal");
+  if (modal) modal.style.display = "none";
+  _pendingRecoverySnapshot = null;
+}
+
 function showResult(data) {
   gameOver = true;
   movesQueue.length = 0;
@@ -1118,11 +1149,60 @@ function showResult(data) {
     bodyEl.innerHTML = `<p>Hops: <strong>${position.currentRow}</strong></p>`;
   }
   resultDOM.style.visibility = "visible";
+
+  // Auto-hide after 3 s or when Play Again is clicked
+  if (_resultAutoHideTimer) clearTimeout(_resultAutoHideTimer);
+  _resultAutoHideTimer = setTimeout(() => {
+    _resultAutoHideTimer = null;
+    if (resultDOM.style.visibility === "visible") {
+      hideResult();
+      showBetPanel(true);
+      initializeGame();
+    }
+  }, 3000);
 }
 
 function hideResult() {
+  if (_resultAutoHideTimer) {
+    clearTimeout(_resultAutoHideTimer);
+    _resultAutoHideTimer = null;
+  }
   const el = document.getElementById("result-container");
   if (el) el.style.visibility = "hidden";
+}
+
+let _globalToastTimeout = null;
+
+function showGlobalErrorToast(msg) {
+  let toast = document.getElementById("global-error-toast");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "global-error-toast";
+    Object.assign(toast.style, {
+      position: "fixed",
+      bottom: "90px",
+      left: "50%",
+      transform: "translateX(-50%)",
+      background: "#c0392b",
+      color: "#fff",
+      padding: "10px 18px",
+      borderRadius: "6px",
+      fontWeight: "bold",
+      fontSize: "13px",
+      zIndex: "10000",
+      maxWidth: "88%",
+      textAlign: "center",
+      boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
+      pointerEvents: "none",
+    });
+    document.body.appendChild(toast);
+  }
+  toast.innerText = msg;
+  toast.style.display = "block";
+  if (_globalToastTimeout) clearTimeout(_globalToastTimeout);
+  _globalToastTimeout = setTimeout(() => {
+    toast.style.display = "none";
+  }, 4200);
 }
 
 function Camera() {
@@ -1188,7 +1268,7 @@ function Car(initialTileIndex, direction, color) {
   if (!direction) car.rotation.z = Math.PI;
 
   const main = new THREE.Mesh(
-    new THREE.BoxGeometry(60, 30, 15),
+    new THREE.BoxGeometry(65, 28, 12),
     new THREE.MeshLambertMaterial({ color, flatShading: true }),
   );
   main.position.z = 12;
@@ -1196,7 +1276,7 @@ function Car(initialTileIndex, direction, color) {
   main.receiveShadow = true;
   car.add(main);
 
-  const cabin = new THREE.Mesh(new THREE.BoxGeometry(33, 24, 12), [
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(28, 22, 9), [
     new THREE.MeshPhongMaterial({
       color: 0xe8f4ff,
       flatShading: true,
@@ -1220,22 +1300,30 @@ function Car(initialTileIndex, direction, color) {
     new THREE.MeshPhongMaterial({ color: 0xd9ecff, flatShading: true }), // top
     new THREE.MeshPhongMaterial({ color: 0xcccccc, flatShading: true }), // bottom
   ]);
-  cabin.position.x = -6;
-  cabin.position.z = 25.5;
+  cabin.position.x = -10;
+  cabin.position.z = 22;
   cabin.castShadow = true;
   cabin.receiveShadow = true;
   car.add(cabin);
 
+  const spoiler = new THREE.Mesh(
+    new THREE.BoxGeometry(2, 26, 3),
+    new THREE.MeshLambertMaterial({ color: 0x111111, flatShading: true }),
+  );
+  spoiler.position.set(-31, 0, 22);
+  spoiler.castShadow = true;
+  car.add(spoiler);
+
   const headlightMat = new THREE.MeshBasicMaterial({ color: 0xfff4b0 });
   const headlightL = new THREE.Mesh(
-    new THREE.BoxGeometry(1, 4, 3),
+    new THREE.BoxGeometry(1, 3, 2),
     headlightMat,
   );
   headlightL.position.set(30.5, -10, 11);
   car.add(headlightL);
 
   const headlightR = new THREE.Mesh(
-    new THREE.BoxGeometry(1, 4, 3),
+    new THREE.BoxGeometry(1, 3, 2),
     headlightMat,
   );
   headlightR.position.set(30.5, 10, 11);
@@ -1261,7 +1349,7 @@ function Car(initialTileIndex, direction, color) {
     flatShading: true,
   });
   const bumperFront = new THREE.Mesh(
-    new THREE.BoxGeometry(1, 28, 4),
+    new THREE.BoxGeometry(2, 30, 5),
     bumperMat,
   );
   bumperFront.position.set(30.5, 0, 8);
@@ -1300,7 +1388,7 @@ function DirectionalLight() {
   return dirLight;
 }
 
-function createMonadCheckpointBannerTexture(cpNumber) {
+function createRialChickBannerTexture(cpNumber) {
   const canvas = document.createElement("canvas");
   canvas.width = 512;
   canvas.height = 128;
@@ -1308,24 +1396,24 @@ function createMonadCheckpointBannerTexture(cpNumber) {
 
   if (!ctx) return new THREE.CanvasTexture(canvas);
 
-  ctx.fillStyle = "#1a1036";
+  ctx.fillStyle = "#0D0D0D";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  ctx.fillStyle = "#8f6dff";
+  ctx.fillStyle = "#F5C518";
   ctx.fillRect(0, 0, canvas.width, 10);
   ctx.fillRect(0, canvas.height - 10, canvas.width, 10);
 
-  ctx.fillStyle = "#ffffff";
+  ctx.fillStyle = "#F5C518";
   ctx.beginPath();
   ctx.arc(54, canvas.height / 2, 24, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = "#1a1036";
+  ctx.fillStyle = "#0D0D0D";
   ctx.beginPath();
   ctx.arc(54, canvas.height / 2, 13, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = "#ffffff";
+  ctx.fillStyle = "#F5C518";
   ctx.font = "bold 38px Arial";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -1340,7 +1428,7 @@ function createMonadCheckpointBannerTexture(cpNumber) {
   return texture;
 }
 
-function createGmonadGroundTexture() {
+function createRialChickGroundTexture() {
   const canvas = document.createElement("canvas");
   canvas.width = 1024;
   canvas.height = 256;
@@ -1354,12 +1442,41 @@ function createGmonadGroundTexture() {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
-  ctx.strokeStyle = "rgba(255,255,255,0.88)";
+  ctx.strokeStyle = "rgba(13,13,13,0.88)";
   ctx.lineWidth = 18;
-  ctx.strokeText("GMonad", canvas.width / 2, canvas.height / 2 + 6);
+  ctx.strokeText("Rial Chick", canvas.width / 2, canvas.height / 2 + 6);
 
-  ctx.fillStyle = "rgba(30, 18, 64, 0.88)";
-  ctx.fillText("GMonad", canvas.width / 2, canvas.height / 2 + 6);
+  ctx.fillStyle = "rgba(245,197,24,0.88)";
+  ctx.fillText("Rial Chick", canvas.width / 2, canvas.height / 2 + 6);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+  return texture;
+}
+
+function createRialoImageTexture() {
+  const loader = new THREE.TextureLoader();
+  const texture = loader.load("/images/rialo-graffiti.png");
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.needsUpdate = true;
+  return texture;
+}
+
+function createGRialoGroundTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1024;
+  canvas.height = 256;
+  const ctx = canvas.getContext("2d");
+
+  if (!ctx) return new THREE.CanvasTexture(canvas);
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.filter = "blur(2px)";
+  ctx.font = "bold italic 120px Arial";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "rgba(184,134,11,0.4)";
+  ctx.fillText("GRialo", canvas.width / 2, canvas.height / 2);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.needsUpdate = true;
@@ -1376,8 +1493,8 @@ function Grass(rowIndex, isCheckpoint) {
       new THREE.MeshLambertMaterial({ color }),
     );
 
-  const middleColor = isCheckpoint ? 0xffe066 : 0xbaf455;
-  const sideColor = isCheckpoint ? 0xf5c518 : 0x99c846;
+  const middleColor = isCheckpoint ? 0xF5C518 : 0xD4B483;
+  const sideColor = isCheckpoint ? 0x0D0D0D : 0xC4A470;
 
   const middle = createSection(middleColor);
   middle.receiveShadow = true;
@@ -1394,11 +1511,11 @@ function Grass(rowIndex, isCheckpoint) {
   if (isCheckpoint) {
     const cpNumber = Math.floor(rowIndex / CP_INTERVAL);
     const postMat = new THREE.MeshLambertMaterial({
-      color: 0x8b4513,
+      color: 0x0D0D0D,
       flatShading: true,
     });
     const bannerMat = new THREE.MeshLambertMaterial({
-      map: createMonadCheckpointBannerTexture(cpNumber),
+      map: createRialChickBannerTexture(cpNumber),
     });
 
     const postL = new THREE.Mesh(new THREE.BoxGeometry(3, 3, 40), postMat);
@@ -1422,7 +1539,7 @@ function Grass(rowIndex, isCheckpoint) {
     const gmonadGroundLabel = new THREE.Mesh(
       new THREE.PlaneGeometry(tilesPerRow * tileSize * 0.62, tileSize * 0.7),
       new THREE.MeshBasicMaterial({
-        map: createGmonadGroundTexture(),
+        map: createRialChickGroundTexture(),
         transparent: true,
         depthWrite: false,
       }),
@@ -1430,11 +1547,11 @@ function Grass(rowIndex, isCheckpoint) {
     gmonadGroundLabel.position.set(0, 0, 1.7);
     grass.add(gmonadGroundLabel);
 
-    // Monad-themed flags at edges
+    // Rial Chick flags at edges
     [-1, 1].forEach((side) => {
       const flag = new THREE.Mesh(
         new THREE.BoxGeometry(2, 2, 18),
-        new THREE.MeshLambertMaterial({ color: 0x7d5cff, flatShading: true }),
+        new THREE.MeshLambertMaterial({ color: 0x0D0D0D, flatShading: true }),
       );
       flag.position.set(side * tilesPerRow * tileSize * 0.42, 15, 9);
       flag.castShadow = true;
@@ -1442,7 +1559,7 @@ function Grass(rowIndex, isCheckpoint) {
 
       const flagTop = new THREE.Mesh(
         new THREE.BoxGeometry(8, 1, 5),
-        new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true }),
+        new THREE.MeshLambertMaterial({ color: 0xEDE8DC, flatShading: true }),
       );
       flagTop.position.set(
         side * tilesPerRow * tileSize * 0.42 + side * 4,
@@ -1494,6 +1611,31 @@ function Grass(rowIndex, isCheckpoint) {
     bush.position.z = 4.5;
     bush.castShadow = true;
     grass.add(bush);
+  }
+
+  if (rowIndex === 0) {
+    const watermark = new THREE.Mesh(
+      new THREE.PlaneGeometry(tilesPerRow * tileSize * 0.5, tileSize * 1.2),
+      new THREE.MeshBasicMaterial({
+        map: createRialoImageTexture(),
+        transparent: true,
+        alphaTest: 0.1,
+        depthWrite: false,
+      }),
+    );
+    watermark.position.set(0, 0, 1.8);
+    grass.add(watermark);
+  } else if (!isCheckpoint && rowIndex % 8 === 0) {
+    const watermark = new THREE.Mesh(
+      new THREE.PlaneGeometry(tilesPerRow * tileSize * 0.45, tileSize * 0.55),
+      new THREE.MeshBasicMaterial({
+        map: createGRialoGroundTexture(),
+        transparent: true,
+        depthWrite: false,
+      }),
+    );
+    watermark.position.set(0, 0, 1.8);
+    grass.add(watermark);
   }
 
   return grass;
@@ -1793,20 +1935,20 @@ function Road(rowIndex) {
       new THREE.MeshLambertMaterial({ color }),
     );
 
-  const middle = createSection(0x454a59);
+  const middle = createSection(0x555555);
   middle.receiveShadow = true;
   road.add(middle);
 
-  const left = createSection(0x393d49);
+  const left = createSection(0x444444);
   left.position.x = -tilesPerRow * tileSize;
   road.add(left);
 
-  const right = createSection(0x393d49);
+  const right = createSection(0x444444);
   right.position.x = tilesPerRow * tileSize;
   road.add(right);
 
   const curbMat = new THREE.MeshLambertMaterial({
-    color: 0xd6d8dd,
+    color: 0xFFFFFF,
     flatShading: true,
   });
   const curbFront = new THREE.Mesh(
@@ -1826,70 +1968,264 @@ function Road(rowIndex) {
   return road;
 }
 
-function Tree(tileIndex, height, variant = "round") {
+function Tree(tileIndex, _height, variant = "cone") {
   const tree = new THREE.Group();
   tree.position.x = tileIndex * tileSize;
 
-  const trunk = new THREE.Mesh(
-    new THREE.BoxGeometry(12, 12, 20),
-    new THREE.MeshLambertMaterial({
-      color: 0x6b4226,
-      flatShading: true,
-    }),
-  );
-  trunk.position.z = 10;
-  trunk.castShadow = true;
-  trunk.receiveShadow = true;
-  tree.add(trunk);
+  if (variant === "flag") {
+    // Checkered flag on a tall white pole
+    const pole = new THREE.Mesh(
+      new THREE.BoxGeometry(2, 2, 40),
+      new THREE.MeshLambertMaterial({ color: 0xFFFFFF, flatShading: true }),
+    );
+    pole.position.z = 20;
+    pole.castShadow = true;
+    tree.add(pole);
 
-  if (variant === "pine") {
-    const tiers = 3;
-    const tierH = height / tiers;
-    for (let i = 0; i < tiers; i++) {
-      const size = 32 - i * 8;
-      const shade = i === 0 ? 0x2f7a3a : i === 1 ? 0x3d8f47 : 0x4fa558;
-      const tier = new THREE.Mesh(
-        new THREE.BoxGeometry(size, size, tierH),
-        new THREE.MeshLambertMaterial({ color: shade, flatShading: true }),
+    // Flag base (white)
+    const flag = new THREE.Mesh(
+      new THREE.BoxGeometry(16, 2, 10),
+      new THREE.MeshLambertMaterial({ color: 0xF0F0F0, flatShading: true }),
+    );
+    flag.position.set(8, 0, 43);
+    flag.castShadow = true;
+    tree.add(flag);
+
+    // Dark squares overlaid to create checkered pattern
+    const checkMat = new THREE.MeshLambertMaterial({ color: 0x111111, flatShading: true });
+    const check1 = new THREE.Mesh(new THREE.BoxGeometry(8, 2.1, 5), checkMat);
+    check1.position.set(4, 0, 45.5);
+    tree.add(check1);
+    const check2 = new THREE.Mesh(new THREE.BoxGeometry(8, 2.1, 5), checkMat);
+    check2.position.set(12, 0, 40.5);
+    tree.add(check2);
+
+  } else if (variant === "pitboard") {
+    // Pit board: short black pole + colored sign
+    const pole = new THREE.Mesh(
+      new THREE.BoxGeometry(2, 2, 20),
+      new THREE.MeshLambertMaterial({ color: 0x111111, flatShading: true }),
+    );
+    pole.position.z = 10;
+    pole.castShadow = true;
+    tree.add(pole);
+
+    const boardColor = randomElement([0xCC0000, 0x0066CC]);
+    const board = new THREE.Mesh(
+      new THREE.BoxGeometry(20, 2, 12),
+      new THREE.MeshLambertMaterial({ color: boardColor, flatShading: true }),
+    );
+    board.position.set(0, 0, 26);
+    board.castShadow = true;
+    tree.add(board);
+
+  } else if (variant === "floodlight") {
+    // Stadium floodlight: tall pole + horizontal bracket + two lamp heads
+    const poleMat = new THREE.MeshLambertMaterial({ color: 0x333333, flatShading: true });
+    const bracketMat = new THREE.MeshLambertMaterial({ color: 0x444444, flatShading: true });
+    const lampMat = new THREE.MeshLambertMaterial({ color: 0xFFE000, flatShading: true });
+
+    const pole = new THREE.Mesh(new THREE.BoxGeometry(4, 4, 60), poleMat);
+    pole.position.z = 30;
+    pole.castShadow = true;
+    tree.add(pole);
+
+    const bracket = new THREE.Mesh(new THREE.BoxGeometry(16, 2.5, 2.5), bracketMat);
+    bracket.position.z = 62;
+    bracket.castShadow = true;
+    tree.add(bracket);
+
+    const lampL = new THREE.Mesh(new THREE.BoxGeometry(7, 5, 5), lampMat);
+    lampL.position.set(-9, 0, 62);
+    lampL.castShadow = true;
+    tree.add(lampL);
+
+    const lampR = new THREE.Mesh(new THREE.BoxGeometry(7, 5, 5), lampMat);
+    lampR.position.set(9, 0, 62);
+    lampR.castShadow = true;
+    tree.add(lampR);
+
+  } else if (variant === "tirepile") {
+    // Tire pile: 3 stacked tires with white reflective stripes
+    const tireMat = new THREE.MeshLambertMaterial({ color: 0x111111, flatShading: true });
+    const stripeMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF, flatShading: true });
+    const tireR = 10;
+    const tireH = 7;
+    const offsets = [[0, 0], [2, 1], [-1, 2]];
+
+    offsets.forEach(([ox, oy], i) => {
+      const z = i * (tireH + 1) + tireH / 2;
+
+      const tire = new THREE.Mesh(
+        new THREE.CylinderGeometry(tireR, tireR, tireH, 12),
+        tireMat,
       );
-      tier.position.z = 20 + i * tierH + tierH / 2;
-      tier.castShadow = true;
-      tier.receiveShadow = true;
-      tree.add(tier);
-    }
+      tire.rotation.x = Math.PI / 2;
+      tire.position.set(ox, oy, z);
+      tire.castShadow = true;
+      tire.receiveShadow = true;
+      tree.add(tire);
+
+      const tireStripe = new THREE.Mesh(
+        new THREE.CylinderGeometry(tireR + 0.5, tireR + 0.5, 1.5, 12),
+        stripeMat,
+      );
+      tireStripe.rotation.x = Math.PI / 2;
+      tireStripe.position.set(ox, oy, z);
+      tree.add(tireStripe);
+    });
+
+  } else if (variant === "gridmarker") {
+    // Starting grid: 2 flat numbered boxes side by side on the ground
+    const makeGridTexture = (num) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 128;
+      canvas.height = 128;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return new THREE.CanvasTexture(canvas);
+      ctx.fillStyle = "#FFDD00";
+      ctx.fillRect(0, 0, 128, 128);
+      ctx.fillStyle = "#000000";
+      ctx.font = "bold 80px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(String(num), 64, 64);
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.needsUpdate = true;
+      return tex;
+    };
+
+    const n1 = Math.ceil(Math.random() * 8);
+    let n2;
+    do { n2 = Math.ceil(Math.random() * 8); } while (n2 === n1);
+
+    [-20, 20].forEach((xOffset, idx) => {
+      const marker = new THREE.Mesh(
+        new THREE.BoxGeometry(36, 18, 1),
+        new THREE.MeshBasicMaterial({
+          map: makeGridTexture(idx === 0 ? n1 : n2),
+          transparent: true,
+          opacity: 0.8,
+        }),
+      );
+      marker.position.set(xOffset, 0, 1.8);
+      marker.receiveShadow = true;
+      tree.add(marker);
+    });
+
+  } else if (variant === "podium") {
+    // Racing podium: 3 stepped blocks (1st tallest, 2nd medium, 3rd shortest)
+    const makePodiumTexture = (num, bg) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 128;
+      canvas.height = 128;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return new THREE.CanvasTexture(canvas);
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, 128, 128);
+      ctx.fillStyle = "#000000";
+      ctx.font = "bold 80px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(String(num), 64, 64);
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.needsUpdate = true;
+      return tex;
+    };
+
+    const steps = [
+      { x: 0,   zH: 22, num: 1, bg: "#F5C518", color: 0xF5C518 },
+      { x: -18, zH: 15, num: 2, bg: "#C0C0C0", color: 0xC0C0C0 },
+      { x:  18, zH: 10, num: 3, bg: "#CD7F32", color: 0xCD7F32 },
+    ];
+
+    steps.forEach(({ x, zH, num, bg, color }) => {
+      const block = new THREE.Mesh(
+        new THREE.BoxGeometry(16, 16, zH),
+        new THREE.MeshLambertMaterial({ color, flatShading: true }),
+      );
+      block.position.set(x, 0, zH / 2);
+      block.castShadow = true;
+      block.receiveShadow = true;
+      tree.add(block);
+
+      // Number label — upright, facing camera in isometric view
+      const label = new THREE.Mesh(
+        new THREE.PlaneGeometry(14, zH * 0.85),
+        new THREE.MeshBasicMaterial({
+          map: makePodiumTexture(num, bg),
+          transparent: true,
+          opacity: 0.95,
+          side: THREE.DoubleSide,
+        }),
+      );
+      label.position.set(x, -9, zH / 2);
+      label.rotation.y = Math.PI / 2;
+      tree.add(label);
+    });
+
+  } else if (variant === "trophy") {
+    // Racing trophy: base → stem → cup body → handles → top
+    const goldMat = new THREE.MeshLambertMaterial({ color: 0xF5C518, flatShading: true });
+
+    const base = new THREE.Mesh(new THREE.BoxGeometry(15, 15, 5), goldMat);
+    base.position.z = 2.5;
+    base.castShadow = true;
+    base.receiveShadow = true;
+    tree.add(base);
+
+    const stem = new THREE.Mesh(new THREE.BoxGeometry(5, 5, 15), goldMat);
+    stem.position.z = 12.5;
+    stem.castShadow = true;
+    tree.add(stem);
+
+    const body = new THREE.Mesh(new THREE.BoxGeometry(20, 10, 10), goldMat);
+    body.position.z = 25;
+    body.castShadow = true;
+    tree.add(body);
+
+    const handleGeo = new THREE.BoxGeometry(5, 10, 8);
+    const handleL = new THREE.Mesh(handleGeo, goldMat);
+    handleL.position.set(-12.5, 0, 25);
+    tree.add(handleL);
+    const handleR = new THREE.Mesh(handleGeo, goldMat);
+    handleR.position.set(12.5, 0, 25);
+    tree.add(handleR);
+
+    const top = new THREE.Mesh(new THREE.BoxGeometry(8, 8, 5), goldMat);
+    top.position.z = 32.5;
+    top.castShadow = true;
+    tree.add(top);
+
   } else {
-    const crown = new THREE.Mesh(
-      new THREE.BoxGeometry(30, 30, height),
-      new THREE.MeshLambertMaterial({
-        color: 0x7aa21d,
-        flatShading: true,
-      }),
+    // Default: traffic cone
+    const base = new THREE.Mesh(
+      new THREE.BoxGeometry(18, 18, 3),
+      new THREE.MeshLambertMaterial({ color: 0x111111, flatShading: true }),
     );
-    crown.position.z = height / 2 + 20;
-    crown.castShadow = true;
-    crown.receiveShadow = true;
-    tree.add(crown);
+    base.position.z = 1.5;
+    base.castShadow = true;
+    base.receiveShadow = true;
+    tree.add(base);
 
-    const crownTop = new THREE.Mesh(
-      new THREE.BoxGeometry(22, 22, 8),
-      new THREE.MeshLambertMaterial({
-        color: 0x94c043,
-        flatShading: true,
-      }),
+    const cone = new THREE.Mesh(
+      new THREE.ConeGeometry(9, 32, 8),
+      new THREE.MeshLambertMaterial({ color: 0xFF6600, flatShading: true }),
     );
-    crownTop.position.z = height + 20 + 4;
-    crownTop.castShadow = true;
-    tree.add(crownTop);
+    cone.rotation.x = Math.PI / 2;
+    cone.position.z = 19;
+    cone.castShadow = true;
+    cone.receiveShadow = true;
+    tree.add(cone);
 
-    const bump = new THREE.Mesh(
-      new THREE.BoxGeometry(10, 10, 6),
-      new THREE.MeshLambertMaterial({
-        color: 0x5c8510,
-        flatShading: true,
-      }),
+    const stripe = new THREE.Mesh(
+      new THREE.CylinderGeometry(5.5, 7.0, 5, 8),
+      new THREE.MeshLambertMaterial({ color: 0xFFFFFF, flatShading: true }),
     );
-    bump.position.set(6, 6, height / 2 + 20 + height / 4);
-    tree.add(bump);
+    stripe.rotation.x = Math.PI / 2;
+    stripe.position.z = 11;
+    stripe.castShadow = true;
+    tree.add(stripe);
   }
 
   return tree;
@@ -1952,14 +2288,14 @@ function Truck(initialTileIndex, direction, color) {
 
   const headlightMat = new THREE.MeshBasicMaterial({ color: 0xfff4b0 });
   const headlightL = new THREE.Mesh(
-    new THREE.BoxGeometry(1, 4, 3),
+    new THREE.BoxGeometry(1, 3, 2),
     headlightMat,
   );
   headlightL.position.set(50.5, -10, 12);
   truck.add(headlightL);
 
   const headlightR = new THREE.Mesh(
-    new THREE.BoxGeometry(1, 4, 3),
+    new THREE.BoxGeometry(1, 3, 2),
     headlightMat,
   );
   headlightR.position.set(50.5, 10, 12);
@@ -2104,7 +2440,16 @@ function generateForesMetadata() {
     occupiedTiles.add(tileIndex);
 
     const height = randomElement([20, 45, 60]);
-    const variant = randomElement(["round", "round", "pine"]);
+    const variant = randomElement([
+      "cone", "cone", "cone", "cone", "cone", "cone", "cone",
+      "tirepile", "tirepile", "tirepile", "tirepile",
+      "floodlight", "floodlight",
+      "gridmarker", "gridmarker",
+      "podium", "podium",
+      "trophy",
+      "flag",
+      "pitboard",
+    ]);
 
     return { tileIndex, height, variant };
   });
@@ -2114,7 +2459,7 @@ function generateForesMetadata() {
 
 function generateCarLaneMetadata() {
   const direction = randomElement([true, false]);
-  const speed = randomElement([100, 130, 160]);
+  const speed = randomElement([55, 72, 88]);
 
   const occupiedTiles = new Set();
 
@@ -2128,8 +2473,7 @@ function generateCarLaneMetadata() {
     occupiedTiles.add(initialTileIndex + 1);
 
     const color = randomElement([
-      0xe63946, 0xf4a261, 0x2a9d8f, 0x457b9d, 0xe76f51, 0xffb703, 0x9b5de5,
-      0x06d6a0,
+      0xCC0000, 0x0066CC, 0xFFD700, 0x00AA44, 0xFF6600, 0xF0F0F0,
     ]);
 
     return { initialTileIndex, color };
@@ -2140,7 +2484,7 @@ function generateCarLaneMetadata() {
 
 function generateTruckLaneMetadata() {
   const direction = randomElement([true, false]);
-  const speed = randomElement([200, 250, 300]);
+  const speed = randomElement([110, 138, 165]);
 
   const occupiedTiles = new Set();
 
@@ -2156,7 +2500,7 @@ function generateTruckLaneMetadata() {
     occupiedTiles.add(initialTileIndex + 2);
 
     const color = randomElement([
-      0x1d3557, 0xe63946, 0x2a9d8f, 0xe76f51, 0x6d597a, 0x8338ec,
+      0xCC0000, 0x0066CC, 0xFFD700, 0x00AA44, 0xFF6600, 0xF0F0F0,
     ]);
 
     return { initialTileIndex, color };
@@ -2345,6 +2689,15 @@ const resultDOM = document.getElementById("result-container");
 
 initializeGame();
 initBettingUI();
+
+// Re-fetch balance once the React bridge is fully mounted (avoids $0 on first load).
+window.addEventListener("chicken:bridge-ready", () => {
+  void loadBalance();
+});
+
+window.addEventListener("chicken:refresh-balance", () => {
+  void loadBalance();
+});
 
 function initializeGame() {
   initializePlayer();
@@ -3377,11 +3730,9 @@ function initBettingUI() {
       return;
     }
     if (!hasLiveBridge() && stake > bet.balance) {
-      showErrorToast(
-        `Insufficient balance. You have $${bet.balance.toFixed(
-          2,
-        )}. Deposit more first.`,
-      );
+      const msg = `Insufficient balance. Available $${bet.balance.toFixed(2)}. Claim faucet to top up.`;
+      showErrorToast(msg);
+      showGlobalErrorToast(msg);
       return;
     }
 
@@ -3391,11 +3742,9 @@ function initBettingUI() {
         try {
           const available = await bridge.loadAvailableBalance();
           if (!isFinite(available) || available < stake) {
-            showErrorToast(
-              `Insufficient vault balance. Available $${(available || 0).toFixed(
-                2,
-              )}. Deposit first.`,
-            );
+            const msg = `Insufficient balance. Available $${(available || 0).toFixed(2)}. Claim faucet to top up.`;
+            showErrorToast(msg);
+            showGlobalErrorToast(msg);
             return;
           }
         } catch (error) {
@@ -3411,6 +3760,7 @@ function initBettingUI() {
             durationMs: 4200,
           });
           showErrorToast(message);
+          showGlobalErrorToast(message);
           return;
         }
       }
@@ -3485,6 +3835,7 @@ function initBettingUI() {
         durationMs: 4200,
       });
       showErrorToast(message);
+      showGlobalErrorToast(message);
     }
   });
 
@@ -3517,6 +3868,60 @@ function initBettingUI() {
     void loadBalance();
   });
 
+  window.addEventListener("chicken:server-crash", (event) => {
+    if (!bet.active) return;
+    const payload = event?.detail || {};
+    const reason = String(payload.reason || "");
+    const isDecayTimeout = reason === "decay_timeout";
+
+    bet.active = false;
+    stopBetTicker();
+    setBetButtonState();
+    showBetHud(false);
+    dispatchPlayStatus({ clear: true });
+
+    const mult = payload.multiplier != null ? Number(payload.multiplier) : 0;
+    const lostStake = bet.stake;
+
+    playCrashSfx();
+    const resultDOM = document.getElementById("result-container");
+    const titleEl = document.getElementById("result-title");
+    const bodyEl = document.getElementById("result-body");
+    if (resultDOM && titleEl && bodyEl) {
+      gameOver = true;
+      movesQueue.length = 0;
+      titleEl.innerText = isDecayTimeout ? "TIME'S UP" : "CRASHED";
+      titleEl.style.color = "#c0392b";
+      bodyEl.innerHTML = `
+        <p>Last checkpoint: <strong>${bet.currentCp}</strong></p>
+        <p>Hops survived: <strong>${bet.maxRow}</strong></p>
+        <p>Last multiplier: <strong>${mult.toFixed(2)}x</strong></p>
+        <p class="profit-negative">Lost: -$${lostStake.toFixed(2)}</p>
+      `;
+      resultDOM.style.visibility = "visible";
+
+      if (_resultAutoHideTimer) clearTimeout(_resultAutoHideTimer);
+      _resultAutoHideTimer = setTimeout(() => {
+        _resultAutoHideTimer = null;
+        if (resultDOM.style.visibility === "visible") {
+          hideResult();
+          showBetPanel(true);
+          initializeGame();
+        }
+      }, 3000);
+    }
+
+    dispatchPlayStatus({
+      message: isDecayTimeout
+        ? "TIME'S UP — Multiplier decayed to 0."
+        : "Run ended by server.",
+      tone: "warning",
+      durationMs: 5000,
+    });
+
+    void loadBalance();
+  });
+
   window.addEventListener("chicken:game-disconnected", () => {
     if (!bet.active) return;
 
@@ -3528,15 +3933,60 @@ function initBettingUI() {
     });
   });
 
-  window.addEventListener("chicken:game-reconnected", (event) => {
-    const restored = restoreActiveBetFromSnapshot(event?.detail);
-    if (!restored) return;
+  window.addEventListener("chicken:active-session-found", (event) => {
+    const snapshot = event?.detail;
+    // Only show if not already in a bet and dialog isn't already up
+    if (!bet.active && _pendingRecoverySnapshot === null) {
+      showSessionRecoveryDialog(snapshot);
+    }
+  });
 
-    dispatchPlayStatus({
-      message: "RUN RECONNECTED.",
-      tone: "ready",
-      durationMs: 2600,
-    });
+  window.addEventListener("chicken:game-reconnected", (event) => {
+    const snapshot = event?.detail;
+
+    if (bet.reconnecting) {
+      // Connection drop within same session — auto-restore without asking
+      const restored = restoreActiveBetFromSnapshot(snapshot);
+      if (!restored) return;
+      dispatchPlayStatus({
+        message: "RUN RECONNECTED.",
+        tone: "ready",
+        durationMs: 2600,
+      });
+      return;
+    }
+
+    // Fresh page load — skip if HTTP check already showed the dialog
+    if (_pendingRecoverySnapshot !== null || bet.active) return;
+    showSessionRecoveryDialog(snapshot);
+  });
+
+  document.getElementById("session-recovery-continue")?.addEventListener("click", () => {
+    const snapshot = _pendingRecoverySnapshot;
+    hideSessionRecoveryDialog();
+    if (!snapshot) return;
+    const restored = restoreActiveBetFromSnapshot(snapshot);
+    if (restored) {
+      dispatchPlayStatus({
+        message: "RUN RECONNECTED.",
+        tone: "ready",
+        durationMs: 2600,
+      });
+    }
+  });
+
+  document.getElementById("session-recovery-cancel")?.addEventListener("click", async () => {
+    hideSessionRecoveryDialog();
+    const bridge = getBridge();
+    if (bridge && !bridge.backgroundMode) {
+      try {
+        await bridge.crash("session_abandoned");
+      } catch (err) {
+        console.error("Failed to end abandoned session:", err);
+      }
+      void loadBalance();
+    }
+    showBetPanel(true);
   });
 
   window.addEventListener("chicken:game-reconnect-expired", (event) => {

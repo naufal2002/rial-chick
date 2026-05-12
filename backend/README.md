@@ -1,6 +1,6 @@
-# Pass Chick Backend
+# Rial Chick Backend
 
-The Pass Chick backend powers the server-authoritative game flow and authentication.
+The Rial Chick backend powers the server-authoritative game flow and authentication.
 
 Main responsibilities:
 

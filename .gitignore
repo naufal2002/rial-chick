@@ -17,6 +17,9 @@ frontend/.env.local
 backend/.env
 frontend/tsconfig.tsbuildinfo
 
+# Internal docs
+pass-chick/
+
 # OS generated files
 .DS_Store
 **/.DS_Store

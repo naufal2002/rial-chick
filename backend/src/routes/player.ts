@@ -39,6 +39,41 @@ router.get("/stats", requireAuth, async (req, res) => {
 });
 
 /**
+ * POST /api/player/faucet
+ * Add 1000 mock USDC to the player's balance.
+ */
+router.post("/faucet", requireAuth, async (req, res) => {
+  const walletAddress = req.walletAddress!;
+
+  const { data: player, error: selectError } = await supabase
+    .from("players")
+    .select("balance")
+    .eq("wallet_address", walletAddress)
+    .maybeSingle();
+
+  if (selectError || !player) {
+    res.status(404).json({ error: "Player not found." });
+    return;
+  }
+
+  const newBalance = Number(player.balance ?? 0) + 1000;
+
+  const { error: updateError } = await supabase
+    .from("players")
+    .update({ balance: newBalance })
+    .eq("wallet_address", walletAddress);
+
+  if (updateError) {
+    console.error("❌ Faucet update error:", updateError);
+    res.status(500).json({ error: "Failed to update balance." });
+    return;
+  }
+
+  console.log(`🚿 Faucet: ${walletAddress} +1000 → $${newBalance}`);
+  res.json({ txHash: `mock_faucet_${Date.now()}`, walletBalance: newBalance });
+});
+
+/**
  * GET /api/player/transactions
  * Get authenticated player's blockchain transaction history.
  */

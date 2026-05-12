@@ -23,7 +23,7 @@ type ChickenBridgeSettlementResult = {
   onchainSessionId: string;
   availableBalance: number;
   txHash: string;
-  resolution: ChickenBridgeSettlementResolution;
+  resolution?: ChickenBridgeSettlementResolution;
   signature: string;
   multiplier: number;
   payoutAmount: number;
@@ -180,4 +180,7 @@ type ChickenBridgeApi = {
 
 interface Window {
   __CHICKEN_MONAD_BRIDGE__?: ChickenBridgeApi;
+  ethereum?: {
+    request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+  };
 }

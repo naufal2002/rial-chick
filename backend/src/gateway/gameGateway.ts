@@ -132,6 +132,21 @@ async function handleGameStart(socket: Socket, walletAddress: string, stake: num
     return;
   }
 
+  // Balance check (mock mode): fetch current balance before creating session
+  const { data: playerData } = await supabase
+    .from("players")
+    .select("balance")
+    .eq("wallet_address", walletAddress)
+    .maybeSingle();
+
+  const currentBalance = Number(playerData?.balance ?? 0);
+  if (currentBalance < stake) {
+    socket.emit("game:error", {
+      message: `Insufficient balance. Available: $${currentBalance.toFixed(2)}, required: $${stake.toFixed(2)}.`,
+    });
+    return;
+  }
+
   const { data: stale } = await supabase
     .from("game_sessions")
     .select("session_id, onchain_session_id, stake_amount")
@@ -202,7 +217,7 @@ async function handleGameStart(socket: Socket, walletAddress: string, stake: num
   if (player) {
     await supabase
       .from("players")
-      .update({ total_games: player.total_games + 1 })
+      .update({ total_games: player.total_games + 1, balance: currentBalance - stake })
       .eq("wallet_address", walletAddress);
   }
 
@@ -554,7 +569,7 @@ async function handleGameCashout(socket: Socket, walletAddress: string): Promise
 
   const { data: player } = await supabase
     .from("players")
-    .select("total_wins, total_profit")
+    .select("total_wins, total_profit, balance")
     .eq("wallet_address", walletAddress)
     .single();
 
@@ -564,6 +579,7 @@ async function handleGameCashout(socket: Socket, walletAddress: string): Promise
       .update({
         total_wins: player.total_wins + 1,
         total_profit: player.total_profit + profit,
+        balance: Number(player.balance ?? 0) + payoutAmount,
       })
       .eq("wallet_address", walletAddress);
   }
@@ -712,7 +728,7 @@ async function handleAutoCashout(walletAddress: string): Promise<void> {
 
   const { data: player } = await supabase
     .from("players")
-    .select("total_wins, total_profit")
+    .select("total_wins, total_profit, balance")
     .eq("wallet_address", walletAddress)
     .single();
 
@@ -722,6 +738,7 @@ async function handleAutoCashout(walletAddress: string): Promise<void> {
       .update({
         total_wins: player.total_wins + 1,
         total_profit: player.total_profit + profit,
+        balance: Number(player.balance ?? 0) + payoutAmount,
       })
       .eq("wallet_address", walletAddress);
   }
@@ -730,18 +747,39 @@ async function handleAutoCashout(walletAddress: string): Promise<void> {
 }
 
 function checkCpStayTimeouts(): void {
+  const now = Date.now();
   for (const state of getAllActiveGames()) {
-    if (!state.cashoutWindow || state.isPaused) {
-      continue;
+    if (state.isPaused) continue;
+
+    // CP stay timeout — kick player out of checkpoint window
+    if (state.cashoutWindow) {
+      if (isCpStayExpired(state.timer, now)) {
+        console.log(`⏰ CP stay expired: ${state.walletAddress}`);
+        state.cashoutWindow = false;
+        state.isAtCheckpoint = false;
+        state.timer = onLeaveCheckpoint(state.timer);
+        const socket = io?.sockets.sockets.get(state.socketId);
+        if (socket) {
+          socket.emit("game:cp_expired", { message: "Checkpoint time expired. Keep moving!" });
+        }
+      }
+      continue; // never apply decay crash while at CP
     }
-    if (isCpStayExpired(state.timer)) {
-      console.log(`⏰ CP stay expired: ${state.walletAddress}`);
-      state.cashoutWindow = false;
-      state.isAtCheckpoint = false;
-      state.timer = onLeaveCheckpoint(state.timer);
-      const socket = io?.sockets.sockets.get(state.socketId);
-      if (socket) {
-        socket.emit("game:cp_expired", { message: "Checkpoint time expired. Keep moving!" });
+
+    // Decay crash — RUSH timer ran out and multiplier decayed to 0
+    if (state.timer.segmentActive) {
+      const decayBp = getCurrentDecayBp(state.timer, now);
+      if (decayBp > 0) {
+        const effectiveMult = getEffectiveMultiplierBp(
+          state.multiplierBp,
+          state.timer.segmentStart,
+          now,
+        );
+        if (effectiveMult <= 0) {
+          console.log(`💀 DECAY CRASH: ${state.walletAddress} — multiplier decayed to 0`);
+          const socket = io?.sockets.sockets.get(state.socketId) ?? null;
+          void handleGameCrash(socket, state.walletAddress, "decay_timeout");
+        }
       }
     }
   }
