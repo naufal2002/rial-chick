@@ -81,7 +81,7 @@ These values need to stay in sync across packages:
   - `NEXT_PUBLIC_BACKEND_API_URL`
   - `NEXT_PUBLIC_REOWN_PROJECT_ID`
 - `backend/.env`
-  - `MONAD_RPC_URL`
+  - `RIALO_RPC_URL`
   - `GAME_VAULT_ADDRESS`
   - `GAME_SETTLEMENT_ADDRESS`
   - `TRUST_PASSPORT_ADDRESS`

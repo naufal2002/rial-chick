@@ -33,8 +33,8 @@ export const env = {
   SUPABASE_SERVICE_ROLE_KEY: requireEnv("SUPABASE_SERVICE_ROLE_KEY", "placeholder-key"),
 
   // Blockchain
-  MONAD_RPC_URL: optionalEnv("MONAD_RPC_URL", "https://testnet-rpc.monad.xyz"),
-  MONAD_CHAIN_ID: parseInt(optionalEnv("MONAD_CHAIN_ID", "10143"), 10),
+  RIALO_RPC_URL: optionalEnv("RIALO_RPC_URL", "https://testnet-rpc.monad.xyz"),
+  RIALO_CHAIN_ID: parseInt(optionalEnv("RIALO_CHAIN_ID", "10143"), 10),
 
   // Smart Contract
   GAME_VAULT_ADDRESS: optionalEnv("GAME_VAULT_ADDRESS", "0x0000000000000000000000000000000000000000"),
@@ -58,8 +58,8 @@ console.log(`🔧 Config loaded:`);
 console.log(`   Port: ${env.PORT}`);
 console.log(`   Frontend: ${env.FRONTEND_URL}`);
 console.log(`   Supabase: ${env.SUPABASE_URL.replace(/https?:\/\//, "").substring(0, 20)}...`);
-console.log(`   Monad RPC: ${env.MONAD_RPC_URL}`);
-console.log(`   Chain ID: ${env.MONAD_CHAIN_ID}`);
+console.log(`   Rialo RPC: ${env.RIALO_RPC_URL}`);
+console.log(`   Chain ID: ${env.RIALO_CHAIN_ID}`);
 console.log(`   Vault: ${env.GAME_VAULT_ADDRESS.substring(0, 10)}...`);
 console.log(`   Settlement: ${env.GAME_SETTLEMENT_ADDRESS.substring(0, 10)}...`);
 console.log(`   Passport: ${env.TRUST_PASSPORT_ADDRESS.substring(0, 10)}...`);

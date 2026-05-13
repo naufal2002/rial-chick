@@ -8,7 +8,7 @@ import { signPassportClaim } from "../services/signatureService.js";
 const router = Router();
 
 const passportPublicClient = createPublicClient({
-  transport: http(env.MONAD_RPC_URL),
+  transport: http(env.RIALO_RPC_URL),
 });
 
 const TRUST_PASSPORT_READ_ABI = parseAbi([
@@ -196,7 +196,7 @@ router.post("/issue-signature", requireAuth, async (req: Request, res: Response)
       signature: signed.signature,
       signerAddress: signed.signerAddress,
       signingDomain: {
-        chainId: env.MONAD_CHAIN_ID,
+        chainId: env.RIALO_CHAIN_ID,
         verifyingContract: env.TRUST_PASSPORT_ADDRESS,
       },
       signatureExpiry,

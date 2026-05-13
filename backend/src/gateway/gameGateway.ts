@@ -48,7 +48,7 @@ import { submitSettlementOnchain } from "../services/settlementExecutor.js";
 let io: SocketServer;
 const SIGN_SETTLEMENT_TIMEOUT_MS = 10_000;
 const gatewayPublicClient = createPublicClient({
-  transport: http(env.MONAD_RPC_URL),
+  transport: http(env.RIALO_RPC_URL),
 });
 
 function isValidUsdcStakeAmount(stake: number): boolean {

@@ -49,8 +49,8 @@ SESSION_SECRET=your_session_secret
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
-MONAD_RPC_URL=https://your-monad-rpc
-MONAD_CHAIN_ID=10143
+RIALO_RPC_URL=https://your-monad-rpc
+RIALO_CHAIN_ID=10143
 
 GAME_VAULT_ADDRESS=0x...
 GAME_SETTLEMENT_ADDRESS=0x...

@@ -70,7 +70,7 @@ Verified proxy addresses:
 Set values in `sc/.env`:
 
 ```bash
-MONAD_RPC_URL=https://your-monad-testnet-rpc
+RIALO_RPC_URL=https://your-monad-testnet-rpc
 PRIVATE_KEY=0xyour_private_key
 INITIAL_OWNER=0xyour_owner_address
 USDC_FAUCET_CLAIM_AMOUNT=100000000
@@ -80,7 +80,7 @@ SESSION_EXPIRY_DELAY=86400
 
 Minimum required values for deployment are:
 
-- `MONAD_RPC_URL`
+- `RIALO_RPC_URL`
 - `PRIVATE_KEY`
 
 Other useful values:
@@ -123,14 +123,14 @@ forge fmt
 
 ```bash
 source .env
-forge script script/DeployGameContracts.s.sol:DeployGameContracts --rpc-url "$MONAD_RPC_URL" --broadcast
+forge script script/DeployGameContracts.s.sol:DeployGameContracts --rpc-url "$RIALO_RPC_URL" --broadcast
 ```
 
 ### MonadVision / Sourcify-friendly deploy
 
 ```bash
 source .env
-FOUNDRY_PROFILE=monad_vision forge script script/DeployGameContracts.s.sol:DeployGameContracts --rpc-url "$MONAD_RPC_URL" --broadcast
+FOUNDRY_PROFILE=monad_vision forge script script/DeployGameContracts.s.sol:DeployGameContracts --rpc-url "$RIALO_RPC_URL" --broadcast
 ```
 
 The deploy script:
@@ -182,7 +182,7 @@ To update the backend signer after deployment:
 
 ```bash
 source .env
-forge script script/UpdateBackendSigner.s.sol:UpdateBackendSigner --rpc-url "$MONAD_RPC_URL" --broadcast
+forge script script/UpdateBackendSigner.s.sol:UpdateBackendSigner --rpc-url "$RIALO_RPC_URL" --broadcast
 ```
 
 Use the owner key for the target contracts.

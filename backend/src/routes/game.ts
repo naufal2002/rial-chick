@@ -22,7 +22,7 @@ import {
 
 const router = Router();
 const settlementPublicClient = createPublicClient({
-  transport: http(env.MONAD_RPC_URL),
+  transport: http(env.RIALO_RPC_URL),
 });
 const GAME_SETTLEMENT_READ_ABI = parseAbi([
   "function activeSessionOf(address player) view returns (bytes32)",

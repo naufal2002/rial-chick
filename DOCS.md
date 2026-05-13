@@ -281,13 +281,13 @@ frontend/
 
 ```bash
 # Monad Chain Config
-NEXT_PUBLIC_MONAD_CHAIN_ID=0x279F
-NEXT_PUBLIC_MONAD_CHAIN_NAME=Monad Testnet
-NEXT_PUBLIC_MONAD_RPC_URLS=https://your-monad-rpc
-NEXT_PUBLIC_MONAD_EXPLORER_URLS=https://your-explorer
-NEXT_PUBLIC_MONAD_NATIVE_NAME=MON
-NEXT_PUBLIC_MONAD_NATIVE_SYMBOL=MON
-NEXT_PUBLIC_MONAD_NATIVE_DECIMALS=18
+NEXT_PUBLIC_RIALO_CHAIN_ID=0x279F
+NEXT_PUBLIC_RIALO_CHAIN_NAME=Monad Testnet
+NEXT_PUBLIC_RIALO_RPC_URLS=https://your-monad-rpc
+NEXT_PUBLIC_RIALO_EXPLORER_URLS=https://your-explorer
+NEXT_PUBLIC_RIALO_NATIVE_NAME=MON
+NEXT_PUBLIC_RIALO_NATIVE_SYMBOL=MON
+NEXT_PUBLIC_RIALO_NATIVE_DECIMALS=18
 
 # Contract Addresses
 NEXT_PUBLIC_USDC_ADDRESS=0x5631dF2e613141a4E57ca7BCD25e634825b16c7d
@@ -314,8 +314,8 @@ SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
 # Blockchain
-MONAD_RPC_URL=https://your-monad-rpc
-MONAD_CHAIN_ID=10143
+RIALO_RPC_URL=https://your-monad-rpc
+RIALO_CHAIN_ID=10143
 
 # Contract Addresses
 GAME_VAULT_ADDRESS=0x45B893d50dfDC750Ab8d3696cAC5556A697153ca
@@ -334,7 +334,7 @@ PASSPORT_VALIDITY_SECONDS=2592000
 ### Smart Contracts (`sc/.env`)
 
 ```bash
-MONAD_RPC_URL=https://your-monad-testnet-rpc
+RIALO_RPC_URL=https://your-monad-testnet-rpc
 PRIVATE_KEY=0xyour_private_key
 INITIAL_OWNER=0xyour_owner_address
 BACKEND_SIGNER=0xyour_backend_signer_address
@@ -393,7 +393,7 @@ forge build
 ```bash
 source .env
 forge script script/DeployGameContracts.s.sol:DeployGameContracts \
-  --rpc-url "$MONAD_RPC_URL" \
+  --rpc-url "$RIALO_RPC_URL" \
   --broadcast
 ```
 
@@ -409,7 +409,7 @@ Script deploy akan:
 ```bash
 FOUNDRY_PROFILE=monad_vision forge build
 FOUNDRY_PROFILE=monad_vision forge script script/DeployGameContracts.s.sol:DeployGameContracts \
-  --rpc-url "$MONAD_RPC_URL" --broadcast
+  --rpc-url "$RIALO_RPC_URL" --broadcast
 ```
 
 ### Verifikasi Kontrak
@@ -441,7 +441,7 @@ Jika perlu mengganti backend signer setelah deployment:
 ```bash
 source .env
 forge script script/UpdateBackendSigner.s.sol:UpdateBackendSigner \
-  --rpc-url "$MONAD_RPC_URL" --broadcast
+  --rpc-url "$RIALO_RPC_URL" --broadcast
 ```
 
 Gunakan owner key dari kontrak target. Set `NEW_BACKEND_SIGNER` di `.env` terlebih dahulu.
@@ -489,7 +489,7 @@ Penyebab umum dan solusinya:
 
 ### RPC rate limit
 
-Public Monad RPC dibatasi ~15 req/sec. Untuk gameplay yang stabil, gunakan dedicated RPC provider di frontend (`NEXT_PUBLIC_MONAD_RPC_URLS`) dan backend (`MONAD_RPC_URL`).
+Public Monad RPC dibatasi ~15 req/sec. Untuk gameplay yang stabil, gunakan dedicated RPC provider di frontend (`NEXT_PUBLIC_RIALO_RPC_URLS`) dan backend (`RIALO_RPC_URL`).
 
 ---
 
