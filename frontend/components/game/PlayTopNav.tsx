@@ -40,10 +40,10 @@ export function PlayTopNav() {
   const {
     account,
     isConnecting,
-    isMonadChain,
+    isRialoChain,
     connectWallet,
     disconnectWallet,
-    switchToMonad,
+    switchToRialo,
     error,
     isBackendAuthenticated,
     isBackendAuthLoading,
@@ -131,7 +131,7 @@ export function PlayTopNav() {
   }
 
   function getBridgeApi() {
-    const bridge = window.__CHICKEN_MONAD_BRIDGE__;
+    const bridge = window.__CHICKEN_RIALO_BRIDGE__;
     if (!bridge || bridge.backgroundMode) {
       throw new Error("Game bridge is not ready yet.");
     }
@@ -257,7 +257,7 @@ export function PlayTopNav() {
     if (isConnecting || isBackendAuthLoading || isResolvingPlayBlocker) return;
 
     if (playBlocker.kind !== "none") {
-      const bridge = window.__CHICKEN_MONAD_BRIDGE__;
+      const bridge = window.__CHICKEN_RIALO_BRIDGE__;
       if (!bridge?.resolvePlayBlocker || !bridge?.getPlayBlocker) {
         dispatchStatusUpdate({
           message: "Game bridge is not ready yet. Please try again shortly.",
@@ -299,8 +299,8 @@ export function PlayTopNav() {
       return;
     }
 
-    if (!isMonadChain) {
-      await switchToMonad();
+    if (!isRialoChain) {
+      await switchToRialo();
       return;
     }
 
@@ -337,7 +337,7 @@ export function PlayTopNav() {
     async function syncPlayBlocker() {
       if (
         !isConnected ||
-        !isMonadChain ||
+        !isRialoChain ||
         (hasBackendApiConfig && !isBackendAuthenticated)
       ) {
         if (!cancelled) {
@@ -346,7 +346,7 @@ export function PlayTopNav() {
         return;
       }
 
-      const bridge = window.__CHICKEN_MONAD_BRIDGE__;
+      const bridge = window.__CHICKEN_RIALO_BRIDGE__;
       if (!bridge?.getPlayBlocker) {
         if (!cancelled) {
           setPlayBlocker({ kind: "none" });
@@ -376,7 +376,7 @@ export function PlayTopNav() {
     hasBackendApiConfig,
     isBackendAuthenticated,
     isConnected,
-    isMonadChain,
+    isRialoChain,
   ]);
 
   useEffect(() => {
@@ -568,10 +568,10 @@ export function PlayTopNav() {
   } else if (error) {
     statusTone = "error";
     statusMessage = error;
-    statusActionLabel = !isMonadChain ? "SWITCH" : "";
-  } else if (!isMonadChain) {
+    statusActionLabel = !isRialoChain ? "SWITCH" : "";
+  } else if (!isRialoChain) {
     statusTone = "warning";
-    statusMessage = "SWITCH TO MONAD TESTNET";
+    statusMessage = "SWITCH TO RIALO DEVNET";
     statusActionLabel = "SWITCH";
   } else if (hasBackendApiConfig && isBackendAuthLoading) {
     statusTone = "busy";

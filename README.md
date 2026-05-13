@@ -1,6 +1,6 @@
 # Rial Chick
 
-Rial Chick is a risk-reward arcade game built on Monad testnet with a backend-authoritative game flow.
+Rial Chick is a risk-reward arcade game built on Rialo devnet with a backend-authoritative game flow.
 This repository is split into three main packages:
 
 - `frontend/`: Next.js app for wallet connect, deposit, gameplay, cashout, and passport UX
@@ -96,4 +96,4 @@ These values need to stay in sync across packages:
 
 - The product branding has been updated to `Rial Chick` in the app and docs layers.
 - The onchain EIP-712 domain names were intentionally left unchanged to preserve compatibility with the live deployment.
-- Public Monad RPC endpoints can be rate-limited. For more stable gameplay, use a stronger or dedicated RPC provider.
+- Public Rialo RPC endpoints can be rate-limited. For more stable gameplay, use a stronger or dedicated RPC provider.

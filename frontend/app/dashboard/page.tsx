@@ -177,7 +177,7 @@ export default function DashboardPage() {
         <div className="dashboard-center">
           <div className="dashboard-title" aria-label="Rial Chick">
             <span className="dashboard-title-line">CHICKEN</span>
-            <span className="dashboard-title-line">MONAD</span>
+            <span className="dashboard-title-line">RIALO</span>
           </div>
           <div className="dashboard-actions">
             {showConnectedDashboardUi ? (

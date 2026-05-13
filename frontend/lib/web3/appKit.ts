@@ -5,7 +5,7 @@ import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
 import {
   appKitMetadata,
   appKitNetworks,
-  monadWagmiChain,
+  rialoWagmiChain,
   projectId,
 } from "./wagmiConfig";
 
@@ -16,24 +16,24 @@ export const wagmiAdapter = new WagmiAdapter({
 });
 
 type AppKitRuntimeWindow = typeof globalThis & {
-  __CHICKEN_MONAD_APPKIT_INITIALIZED__?: boolean;
+  __CHICKEN_RIALO_APPKIT_INITIALIZED__?: boolean;
 };
 
 const appKitWindow = globalThis as AppKitRuntimeWindow;
 
 function initializeAppKit() {
-  if (appKitWindow.__CHICKEN_MONAD_APPKIT_INITIALIZED__) {
+  if (appKitWindow.__CHICKEN_RIALO_APPKIT_INITIALIZED__) {
     return;
   }
 
   createAppKit({
     adapters: [wagmiAdapter],
     networks: appKitNetworks,
-    defaultNetwork: monadWagmiChain,
+    defaultNetwork: rialoWagmiChain,
     projectId,
     metadata: appKitMetadata,
   });
-  appKitWindow.__CHICKEN_MONAD_APPKIT_INITIALIZED__ = true;
+  appKitWindow.__CHICKEN_RIALO_APPKIT_INITIALIZED__ = true;
 }
 
 initializeAppKit();

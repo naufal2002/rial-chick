@@ -1,6 +1,6 @@
 # Rial Chick Smart Contracts
 
-This package contains the backend-authoritative onchain flow for Rial Chick on Monad testnet.
+This package contains the backend-authoritative onchain flow for Rial Chick on Rialo devnet.
 All contracts are deployed as UUPS proxies (`ERC1967Proxy` + separate implementations).
 
 Included contracts:
@@ -62,7 +62,7 @@ Verified proxy addresses:
 ## Prerequisites
 
 - Foundry installed
-- a Monad testnet RPC URL
+- a Rialo devnet RPC URL
 - a deployer private key for broadcasts
 
 ## Environment
@@ -70,7 +70,7 @@ Verified proxy addresses:
 Set values in `sc/.env`:
 
 ```bash
-RIALO_RPC_URL=https://your-monad-testnet-rpc
+RIALO_RPC_URL=https://your-rialo-rpc
 PRIVATE_KEY=0xyour_private_key
 INITIAL_OWNER=0xyour_owner_address
 USDC_FAUCET_CLAIM_AMOUNT=100000000
@@ -99,10 +99,10 @@ Other useful values:
 forge build
 ```
 
-### Build for MonadVision / Sourcify
+### Build for RialoVision / Sourcify
 
 ```bash
-FOUNDRY_PROFILE=monad_vision forge build
+FOUNDRY_PROFILE=rialo_vision forge build
 ```
 
 ### Test
@@ -117,7 +117,7 @@ forge test --offline
 forge fmt
 ```
 
-## Deploy to Monad Testnet
+## Deploy to Rialo Devnet
 
 ### Standard deploy
 
@@ -126,11 +126,11 @@ source .env
 forge script script/DeployGameContracts.s.sol:DeployGameContracts --rpc-url "$RIALO_RPC_URL" --broadcast
 ```
 
-### MonadVision / Sourcify-friendly deploy
+### RialoVision / Sourcify-friendly deploy
 
 ```bash
 source .env
-FOUNDRY_PROFILE=monad_vision forge script script/DeployGameContracts.s.sol:DeployGameContracts --rpc-url "$RIALO_RPC_URL" --broadcast
+FOUNDRY_PROFILE=rialo_vision forge script script/DeployGameContracts.s.sol:DeployGameContracts --rpc-url "$RIALO_RPC_URL" --broadcast
 ```
 
 The deploy script:
@@ -152,10 +152,10 @@ NEXT_PUBLIC_TRUST_PASSPORT_ADDRESS=<deployed_trust_passport>
 
 ## Verification
 
-### Verify on MonadVision / Sourcify
+### Verify on RialoVision / Sourcify
 
 ```bash
-FOUNDRY_PROFILE=monad_vision forge verify-contract \
+FOUNDRY_PROFILE=rialo_vision forge verify-contract \
   <contract_address> \
   <contract_name> \
   --chain 10143 \
@@ -163,7 +163,7 @@ FOUNDRY_PROFILE=monad_vision forge verify-contract \
   --verifier-url https://sourcify-api-monad.blockvision.org/
 ```
 
-### Verify on Monadscan / Socialscan
+### Verify on Socialscan
 
 ```bash
 forge verify-contract \

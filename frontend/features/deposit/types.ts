@@ -7,7 +7,7 @@ export type DepositFlowViewModel = {
   statusMessage: string;
   errorMessage: string;
   isConnected: boolean;
-  isMonadChain: boolean;
+  isRialoChain: boolean;
   canTransact: boolean;
   hasValidContracts: boolean;
   usdcAddress: string;

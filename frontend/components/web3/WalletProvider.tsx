@@ -17,16 +17,16 @@ import { BACKEND_API_URL, hasBackendApiConfig } from "../../lib/backend/config";
 type WalletContextValue = {
   account: string;
   chainIdHex: string;
-  isMonadChain: boolean;
+  isRialoChain: boolean;
   isConnecting: boolean;
   error: string;
   connectWallet: () => Promise<void>;
   disconnectWallet: () => Promise<void>;
-  switchToMonad: () => Promise<void>;
+  switchToRialo: () => Promise<void>;
   clearWalletError: () => void;
-  hasMonadChainConfig: boolean;
-  monadChainIdHex: string;
-  monadChainName: string;
+  hasRialoChainConfig: boolean;
+  rialoChainIdHex: string;
+  rialoChainName: string;
   backendApiUrl: string;
   hasBackendApiConfig: boolean;
   isBackendAuthenticated: boolean;
@@ -181,16 +181,16 @@ export function WalletProvider({ children }: WalletProviderProps) {
     () => ({
       account,
       chainIdHex: "",
-      isMonadChain: isConnected, // always "on chain" in mock mode when logged in
+      isRialoChain: isConnected, // always "on chain" in mock mode when logged in
       isConnecting,
       error,
       connectWallet,
       disconnectWallet,
-      switchToMonad: async () => {}, // noop in mock mode
+      switchToRialo: async () => {}, // noop in mock mode
       clearWalletError: () => setError(""),
-      hasMonadChainConfig: true,
-      monadChainIdHex: "",
-      monadChainName: "Mock Mode",
+      hasRialoChainConfig: true,
+      rialoChainIdHex: "",
+      rialoChainName: "Mock Mode",
       backendApiUrl: BACKEND_API_URL,
       hasBackendApiConfig: hasBackendConfig,
       isBackendAuthenticated,

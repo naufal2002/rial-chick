@@ -29,8 +29,8 @@ function shortHash(hash: string) {
 
 function readWalletStatus(flow: DepositFlowViewModel) {
   if (!flow.isConnected) return "Not Connected";
-  if (!flow.isMonadChain) return "Wrong Network";
-  return "Connected (Monad)";
+  if (!flow.isRialoChain) return "Wrong Network";
+  return "Connected (Rialo)";
 }
 
 function readPrimaryLabel(flow: DepositFlowViewModel) {

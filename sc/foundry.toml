@@ -7,9 +7,9 @@ remappings = [
     "@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/"
 ]
 
-# MonadVision / Sourcify-friendly profile for future deployments and verification.
-# Use with: FOUNDRY_PROFILE=monad_vision
-[profile.monad_vision]
+# RialoVision / Sourcify-friendly profile for future deployments and verification.
+# Use with: FOUNDRY_PROFILE=rialo_vision
+[profile.rialo_vision]
 bytecode_hash = "none"
 use_literal_content = true
 cbor_metadata = true

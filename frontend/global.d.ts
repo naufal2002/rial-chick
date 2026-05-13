@@ -179,7 +179,7 @@ type ChickenBridgeApi = {
 };
 
 interface Window {
-  __CHICKEN_MONAD_BRIDGE__?: ChickenBridgeApi;
+  __CHICKEN_RIALO_BRIDGE__?: ChickenBridgeApi;
   ethereum?: {
     request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
   };

@@ -19,7 +19,7 @@ import {
   USDC_DECIMALS,
   hasDepositContractConfig,
 } from "../../lib/web3/contracts";
-import { explorerTxUrl } from "../../lib/web3/monad";
+import { explorerTxUrl } from "../../lib/web3/rialo";
 import type { DepositFlowViewModel } from "./types";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as Address;
@@ -90,7 +90,7 @@ function formatUsdcAmount(value: bigint | undefined) {
 }
 
 export function useOnchainDepositFlow(): DepositFlowViewModel {
-  const { account, isMonadChain } = useWallet();
+  const { account, isRialoChain } = useWallet();
   const [amount, setAmount] = useState("10");
   const [statusMessage, setStatusMessage] = useState("");
   const [uiError, setUiError] = useState("");
@@ -110,7 +110,7 @@ export function useOnchainDepositFlow(): DepositFlowViewModel {
     : undefined;
   const hasValidContracts = hasDepositContractConfig();
   const canTransact = Boolean(
-    isConnected && isMonadChain && ownerAddress && usdcAddress && faucetAddress && vaultAddress
+    isConnected && isRialoChain && ownerAddress && usdcAddress && faucetAddress && vaultAddress
   );
 
   const parsedAmount = useMemo(() => {
@@ -354,7 +354,7 @@ export function useOnchainDepositFlow(): DepositFlowViewModel {
 
   async function onClaimFaucet() {
     if (!canTransact || !faucetAddress) {
-      setUiError("Make sure wallet is connected, on Monad, and faucet config is valid.");
+      setUiError("Make sure wallet is connected, on Rialo, and faucet config is valid.");
       return;
     }
 
@@ -380,7 +380,7 @@ export function useOnchainDepositFlow(): DepositFlowViewModel {
 
   async function onApprove() {
     if (!canTransact || !usdcAddress || !vaultAddress) {
-      setUiError("Make sure wallet is connected, on Monad, and contract config is valid.");
+      setUiError("Make sure wallet is connected, on Rialo, and contract config is valid.");
       return;
     }
     if (!parsedAmount) {
@@ -411,7 +411,7 @@ export function useOnchainDepositFlow(): DepositFlowViewModel {
 
   async function onDeposit() {
     if (!canTransact || !vaultAddress) {
-      setUiError("Make sure wallet is connected, on Monad, and contract config is valid.");
+      setUiError("Make sure wallet is connected, on Rialo, and contract config is valid.");
       return;
     }
     if (!parsedAmount) {
@@ -465,7 +465,7 @@ export function useOnchainDepositFlow(): DepositFlowViewModel {
 
   async function onWithdraw() {
     if (!canTransact || !vaultAddress) {
-      setUiError("Make sure wallet is connected, on Monad, and contract config is valid.");
+      setUiError("Make sure wallet is connected, on Rialo, and contract config is valid.");
       return;
     }
     if (!parsedAmount) {
@@ -529,7 +529,7 @@ export function useOnchainDepositFlow(): DepositFlowViewModel {
     statusMessage,
     errorMessage,
     isConnected,
-    isMonadChain,
+    isRialoChain,
     canTransact,
     hasValidContracts,
     usdcAddress: USDC_ADDRESS,

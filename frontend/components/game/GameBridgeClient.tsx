@@ -126,7 +126,7 @@ export function GameBridgeClient({
 
   useEffect(() => {
     if (backgroundMode) {
-      window.__CHICKEN_MONAD_BRIDGE__ = {
+      window.__CHICKEN_RIALO_BRIDGE__ = {
         backgroundMode: true,
         loadAvailableBalance: async () => 0,
         loadDepositBalances: async () => ({
@@ -166,7 +166,7 @@ export function GameBridgeClient({
         }),
         claimPassport: async () => { throw new Error("Background mode does not support passport claim."); },
       };
-      return () => { delete window.__CHICKEN_MONAD_BRIDGE__; };
+      return () => { delete window.__CHICKEN_RIALO_BRIDGE__; };
     }
 
     // ─── Socket setup ──────────────────────────────────────────────────
@@ -524,7 +524,7 @@ export function GameBridgeClient({
 
     // ─── Bridge API ────────────────────────────────────────────────────
 
-    window.__CHICKEN_MONAD_BRIDGE__ = {
+    window.__CHICKEN_RIALO_BRIDGE__ = {
       backgroundMode: false,
 
       loadAvailableBalance: async () => {
@@ -668,7 +668,7 @@ export function GameBridgeClient({
         await requireReadyGameWallet();
 
         try {
-          const bridge = window.__CHICKEN_MONAD_BRIDGE__;
+          const bridge = window.__CHICKEN_RIALO_BRIDGE__;
           if (bridge?.autoSettlePending) await bridge.autoSettlePending();
         } catch (err) {
           throw new Error(normalizeError(err, "Pending settlement not finished. Resolve it before starting a new bet."));
@@ -803,7 +803,7 @@ export function GameBridgeClient({
         socketRef.current.disconnect();
         socketRef.current = null;
       }
-      delete window.__CHICKEN_MONAD_BRIDGE__;
+      delete window.__CHICKEN_RIALO_BRIDGE__;
     };
   }, [
     account,

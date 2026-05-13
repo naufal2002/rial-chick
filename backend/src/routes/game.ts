@@ -45,7 +45,7 @@ function toSettlementErrorMessage(error: unknown) {
     return `Failed to submit settlement onchain: backend relayer kehabisan MON untuk gas (relayer: ${getSettlementRelayerAddress()}).`;
   }
   if (lower.includes("enotfound") || lower.includes("fetch failed")) {
-    return "Failed to submit settlement onchain: backend gagal mengakses RPC Monad.";
+    return "Failed to submit settlement onchain: backend gagal mengakses RPC.";
   }
   if (lower.includes("invalidsigner")) {
     return "Failed to submit settlement onchain: signer backend tidak cocok dengan signer di contract.";

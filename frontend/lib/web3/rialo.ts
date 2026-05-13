@@ -4,7 +4,7 @@ type NativeCurrency = {
   decimals: number;
 };
 
-export type MonadChainConfig = {
+export type RialoChainConfig = {
   chainIdHex: string;
   chainIdDecimal: number;
   chainName: string;
@@ -42,14 +42,14 @@ function parseChainId(rawValue: string) {
 }
 
 const parsedChainId = parseChainId(process.env.NEXT_PUBLIC_RIALO_CHAIN_ID || "");
-const chainName = process.env.NEXT_PUBLIC_RIALO_CHAIN_NAME || "Monad";
+const chainName = process.env.NEXT_PUBLIC_RIALO_CHAIN_NAME || "Rialo";
 const nativeCurrencyName = process.env.NEXT_PUBLIC_RIALO_NATIVE_NAME || "MON";
 const nativeCurrencySymbol = process.env.NEXT_PUBLIC_RIALO_NATIVE_SYMBOL || "MON";
 const nativeCurrencyDecimals = Number(process.env.NEXT_PUBLIC_RIALO_NATIVE_DECIMALS || "18");
 const rpcUrls = splitList(process.env.NEXT_PUBLIC_RIALO_RPC_URLS || "");
 const blockExplorerUrls = splitList(process.env.NEXT_PUBLIC_RIALO_EXPLORER_URLS || "");
 
-export const MONAD_CHAIN: MonadChainConfig = {
+export const RIALO_CHAIN: RialoChainConfig = {
   chainIdHex: parsedChainId.chainIdHex,
   chainIdDecimal: parsedChainId.chainIdDecimal,
   chainName,
@@ -62,19 +62,19 @@ export const MONAD_CHAIN: MonadChainConfig = {
   blockExplorerUrls,
 };
 
-export function hasMonadChainConfig() {
+export function hasRialoChainConfig() {
   return Boolean(
-    MONAD_CHAIN.chainIdHex &&
-      MONAD_CHAIN.chainIdDecimal > 0 &&
-      MONAD_CHAIN.chainName &&
-      MONAD_CHAIN.rpcUrls.length > 0 &&
-      MONAD_CHAIN.nativeCurrency.symbol
+    RIALO_CHAIN.chainIdHex &&
+      RIALO_CHAIN.chainIdDecimal > 0 &&
+      RIALO_CHAIN.chainName &&
+      RIALO_CHAIN.rpcUrls.length > 0 &&
+      RIALO_CHAIN.nativeCurrency.symbol
   );
 }
 
 export function explorerTxUrl(hash: string) {
   if (!hash) return "";
-  const baseUrl = MONAD_CHAIN.blockExplorerUrls[0];
+  const baseUrl = RIALO_CHAIN.blockExplorerUrls[0];
   if (!baseUrl) return "";
   return `${baseUrl.replace(/\/+$/, "")}/tx/${hash}`;
 }

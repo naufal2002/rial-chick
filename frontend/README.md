@@ -37,8 +37,8 @@ Example values live in `frontend/.env.example`.
 
 ```bash
 NEXT_PUBLIC_RIALO_CHAIN_ID=0x279F
-NEXT_PUBLIC_RIALO_CHAIN_NAME=Monad Testnet
-NEXT_PUBLIC_RIALO_RPC_URLS=https://your-monad-rpc
+NEXT_PUBLIC_RIALO_CHAIN_NAME=Rialo Devnet
+NEXT_PUBLIC_RIALO_RPC_URLS=https://your-rialo-rpc
 NEXT_PUBLIC_RIALO_EXPLORER_URLS=https://your-explorer
 NEXT_PUBLIC_RIALO_NATIVE_NAME=MON
 NEXT_PUBLIC_RIALO_NATIVE_SYMBOL=MON
@@ -75,7 +75,7 @@ NEXT_PUBLIC_REOWN_PROJECT_ID=your_reown_project_id
 Check:
 
 - `NEXT_PUBLIC_REOWN_PROJECT_ID` is valid
-- the wallet is switched to Monad Testnet
+- the wallet is switched to Rialo Devnet
 - the frontend was restarted after `.env` changes
 
 ### Backend auth fails
@@ -88,7 +88,7 @@ Check:
 
 ### RPC rate limits
 
-If you see errors such as `requests limited to 15/sec`, the issue comes from the public Monad RPC.
+If you see errors such as `requests limited to 15/sec`, the issue comes from the public Rialo RPC.
 The best fix is to use a stronger RPC provider for both frontend and backend.
 
 ## Build

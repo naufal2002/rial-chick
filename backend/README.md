@@ -49,7 +49,7 @@ SESSION_SECRET=your_session_secret
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
-RIALO_RPC_URL=https://your-monad-rpc
+RIALO_RPC_URL=https://your-rialo-rpc
 RIALO_CHAIN_ID=10143
 
 GAME_VAULT_ADDRESS=0x...
@@ -115,7 +115,7 @@ Check:
 Common causes:
 
 - the backend relayer ran out of `MON` for gas
-- Monad RPC failed or was rate-limited
+- RPC failed or was rate-limited
 - the backend signer does not match the onchain `backendSigner`
 - the vault treasury is not large enough for the payout
 

@@ -266,7 +266,7 @@ setupAudioUnlock();
 setupSfxVolumeSync();
 
 function getBridge() {
-  return window.__CHICKEN_MONAD_BRIDGE__;
+  return window.__CHICKEN_RIALO_BRIDGE__;
 }
 
 function hasLiveBridge() {

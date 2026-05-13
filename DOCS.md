@@ -1,6 +1,6 @@
 # Rial Chick — Dokumentasi Proyek
 
-Rial Chick adalah game arcade risk-reward berbasis blockchain yang berjalan di Monad testnet. Pemain menyetor mock USDC ke vault, memulai sesi game dengan stake, melihat multiplier naik secara real-time, lalu cashout di checkpoint atau terus bermain dan berisiko crash. Validasi game dilakukan server-side (anti-cheat), dan settlement final dilakukan onchain via signature EIP-712.
+Rial Chick adalah game arcade risk-reward berbasis blockchain yang berjalan di Rialo devnet. Pemain menyetor mock USDC ke vault, memulai sesi game dengan stake, melihat multiplier naik secara real-time, lalu cashout di checkpoint atau terus bermain dan berisiko crash. Validasi game dilakukan server-side (anti-cheat), dan settlement final dilakukan onchain via signature EIP-712.
 
 **App live**: https://rial-chick.vercel.app/
 
@@ -43,7 +43,7 @@ Rial Chick adalah game arcade risk-reward berbasis blockchain yang berjalan di M
 │              Foundry · Solidity 0.8 · OpenZeppelin          │
 │   GameUSDC · USDCFaucet · GameVault · GameSettlement        │
 │                    · TrustPassport                          │
-│                  Monad Testnet (chain 10143)                │
+│                  Rialo Devnet (chain 10143)                 │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -280,10 +280,10 @@ frontend/
 ### Frontend (`frontend/.env`)
 
 ```bash
-# Monad Chain Config
+# Rialo Chain Config
 NEXT_PUBLIC_RIALO_CHAIN_ID=0x279F
-NEXT_PUBLIC_RIALO_CHAIN_NAME=Monad Testnet
-NEXT_PUBLIC_RIALO_RPC_URLS=https://your-monad-rpc
+NEXT_PUBLIC_RIALO_CHAIN_NAME=Rialo Devnet
+NEXT_PUBLIC_RIALO_RPC_URLS=https://your-rialo-rpc
 NEXT_PUBLIC_RIALO_EXPLORER_URLS=https://your-explorer
 NEXT_PUBLIC_RIALO_NATIVE_NAME=MON
 NEXT_PUBLIC_RIALO_NATIVE_SYMBOL=MON
@@ -314,7 +314,7 @@ SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
 # Blockchain
-RIALO_RPC_URL=https://your-monad-rpc
+RIALO_RPC_URL=https://your-rialo-rpc
 RIALO_CHAIN_ID=10143
 
 # Contract Addresses
@@ -334,7 +334,7 @@ PASSPORT_VALIDITY_SECONDS=2592000
 ### Smart Contracts (`sc/.env`)
 
 ```bash
-RIALO_RPC_URL=https://your-monad-testnet-rpc
+RIALO_RPC_URL=https://your-rialo-rpc
 PRIVATE_KEY=0xyour_private_key
 INITIAL_OWNER=0xyour_owner_address
 BACKEND_SIGNER=0xyour_backend_signer_address
@@ -378,7 +378,7 @@ Pastikan `.env` masing-masing package sudah diisi sebelum menjalankan.
 ### Prasyarat
 
 - Foundry terinstall (`forge`, `cast`, `anvil`)
-- RPC URL Monad testnet
+- RPC URL Rialo devnet
 - Private key deployer dengan MON untuk gas
 
 ### Build
@@ -388,7 +388,7 @@ cd sc
 forge build
 ```
 
-### Deploy ke Monad Testnet
+### Deploy ke Rialo Devnet
 
 ```bash
 source .env
@@ -404,26 +404,26 @@ Script deploy akan:
 4. Set GameSettlement sebagai vault settlement operator
 5. Print alamat proxy yang di-deploy
 
-### Build untuk MonadVision / Sourcify
+### Build untuk RialoVision / Sourcify
 
 ```bash
-FOUNDRY_PROFILE=monad_vision forge build
-FOUNDRY_PROFILE=monad_vision forge script script/DeployGameContracts.s.sol:DeployGameContracts \
+FOUNDRY_PROFILE=rialo_vision forge build
+FOUNDRY_PROFILE=rialo_vision forge script script/DeployGameContracts.s.sol:DeployGameContracts \
   --rpc-url "$RIALO_RPC_URL" --broadcast
 ```
 
 ### Verifikasi Kontrak
 
-**MonadVision / Sourcify:**
+**RialoVision / Sourcify:**
 ```bash
-FOUNDRY_PROFILE=monad_vision forge verify-contract \
+FOUNDRY_PROFILE=rialo_vision forge verify-contract \
   <contract_address> <contract_name> \
   --chain 10143 \
   --verifier sourcify \
   --verifier-url https://sourcify-api-monad.blockvision.org/
 ```
 
-**Monadscan / Socialscan:**
+**Socialscan:**
 ```bash
 forge verify-contract \
   <contract_address> <contract_name> \
@@ -450,7 +450,7 @@ Gunakan owner key dari kontrak target. Set `NEW_BACKEND_SIGNER` di `.env` terleb
 
 ## Alamat Kontrak Testnet
 
-Alamat proxy yang aktif di Monad testnet:
+Alamat proxy yang aktif di Rialo devnet:
 
 | Kontrak | Alamat |
 |---|---|
@@ -467,7 +467,7 @@ Alamat proxy yang aktif di Monad testnet:
 ### Wallet tidak bisa konek
 
 - Pastikan `NEXT_PUBLIC_REOWN_PROJECT_ID` valid.
-- Pastikan wallet sudah switch ke **Monad Testnet** (chain id `10143` / `0x279F`).
+- Pastikan wallet sudah switch ke **Rialo Devnet** (chain id `10143` / `0x279F`).
 - Restart frontend setelah mengubah `.env`.
 
 ### SIWE auth gagal
@@ -483,13 +483,13 @@ Penyebab umum dan solusinya:
 | Penyebab | Solusi |
 |---|---|
 | Relayer kehabisan MON untuk gas | Top-up wallet backend signer dengan MON |
-| Monad RPC rate-limited | Ganti ke dedicated RPC provider |
+| RPC rate-limited | Ganti ke dedicated RPC provider |
 | `backendSigner` onchain tidak cocok dengan `BACKEND_PRIVATE_KEY` | Rotasi signer atau sync env |
 | Treasury tidak cukup untuk bayar cashout | `fundTreasury()` dari owner |
 
 ### RPC rate limit
 
-Public Monad RPC dibatasi ~15 req/sec. Untuk gameplay yang stabil, gunakan dedicated RPC provider di frontend (`NEXT_PUBLIC_RIALO_RPC_URLS`) dan backend (`RIALO_RPC_URL`).
+Public Rialo RPC dibatasi ~15 req/sec. Untuk gameplay yang stabil, gunakan dedicated RPC provider di frontend (`NEXT_PUBLIC_RIALO_RPC_URLS`) dan backend (`RIALO_RPC_URL`).
 
 ---
 
